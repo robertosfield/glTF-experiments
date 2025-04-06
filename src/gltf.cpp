@@ -12,37 +12,69 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 #include "gltf.h"
 
+#include <vsg/io/Path.h>
+#include <vsg/io/mem_stream.h>
+
+#include <fstream>
+
 using namespace vsgXchange;
 
 gltf::gltf()
 {
 }
 
-vsg::ref_ptr<vsg::Object> gltf::read(const vsg::Path& filename, vsg::ref_ptr<const vsg::Options> options) const
+bool gltf::supportedExtension(const vsg::Path& ext) const
 {
-    vsg::Path ext = (options && options->extensionHint) ? options->extensionHint : vsg::lowerCaseFileExtension(filename);
-    vsg::Path filenameToUse = vsg::findFile(filename, options);
-    if (!filenameToUse) return {};
+    return ext == ".gltf" || ext == ".glb";
+}
 
+vsg::ref_ptr<vsg::Object> gltf::_read(std::istream& fin, vsg::ref_ptr<const vsg::Options> options) const
+{
+    fin.seekg(0, fin.end);
+    size_t fileSize = fin.tellg();
 
-    vsg::info("gltf::read(",filename ,") Not implemented yet");
+    std::string buffer;
+    buffer.resize(fileSize);
+
+    fin.seekg(0);
+    fin.read(reinterpret_cast<char*>(buffer.data()), fileSize);
+
+    vsg::info("buffer = ", buffer);
+
     return {};
 }
 
-vsg::ref_ptr<vsg::Object> gltf::read(std::istream&, vsg::ref_ptr<const vsg::Options> options) const
+
+vsg::ref_ptr<vsg::Object> gltf::read(const vsg::Path& filename, vsg::ref_ptr<const vsg::Options> options) const
+{
+    vsg::Path ext  = (options && options->extensionHint) ? options->extensionHint : vsg::lowerCaseFileExtension(filename);
+    if (!supportedExtension(ext)) return {};
+
+    vsg::Path filenameToUse = vsg::findFile(filename, options);
+    if (!filenameToUse) return {};
+
+    vsg::ref_ptr<vsg::stringValue> contents = vsg::stringValue::create();
+    auto& buffer = contents->value();
+
+    std::ifstream fin(filenameToUse, std::ios::ate | std::ios::binary);
+    return _read(fin, options);
+}
+
+vsg::ref_ptr<vsg::Object> gltf::read(std::istream& fin, vsg::ref_ptr<const vsg::Options> options) const
 {
     if (!options || !options->extensionHint) return {};
+    if (!supportedExtension(options->extensionHint)) return {};
 
-    vsg::info("gltf::read(std::istream&) Not implemented yet");
-    return {};
+    return _read(fin, options);
 }
 
 vsg::ref_ptr<vsg::Object> gltf::read(const uint8_t* ptr, size_t size, vsg::ref_ptr<const vsg::Options> options) const
 {
     if (!options || !options->extensionHint) return {};
+    if (!supportedExtension(options->extensionHint)) return {};
 
-    vsg::info("gltf::read(const uint8_t* ptr) Not implemented yet");
-    return {};
+    vsg::mem_stream fin(ptr, size);
+    return _read(fin, options);
 }
 
 
