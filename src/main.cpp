@@ -32,32 +32,69 @@ int main(int argc, char** argv)
 
     options->add(vsgXchange::gltf::create());
 
-
+    if (!arguments.read("--clean"))
+    {
 #ifdef vsgXchange_all
     // add use of vsgXchange's support for reading and writing 3rd party file formats
     options->add(vsgXchange::all::create());
 #endif
+    }
 
-    auto scene = vsg::Group::create();
+    auto outputFilename = arguments.value<vsg::Path>("", "-o");
+
+    auto group = vsg::Objects::create();
 
     // read any vsg files from command line arguments
     for (int i=1; i<argc; ++i)
     {
         vsg::Path filename = arguments[i];
-        auto loaded_scene = vsg::read_cast<vsg::Node>(filename, options);
-        if (loaded_scene)
+        if (auto object = vsg::read(filename, options))
         {
-            scene->addChild(loaded_scene);
+            group->addChild(object);
             arguments.remove(i, 1);
             --i;
         }
     }
 
-    if (scene->children.empty())
+    if (group->children.empty())
     {
         std::cout<<"No scene loaded, please specify valid 3d model(s) on command line."<<std::endl;
         return 1;
     }
+
+    if (outputFilename)
+    {
+        if (group->children.size() == 1) vsg::write(group->children[0], outputFilename, options);
+        else vsg::write(group, outputFilename, options);
+
+        return 0;
+    }
+
+    vsg::ref_ptr<vsg::Node> scene;
+    if (group->children.size() == 1)
+    {
+        scene = group->children[0].cast<vsg::Node>();
+    }
+    else
+    {
+        auto node_group = vsg::Group::create();
+        for(auto child : group->children)
+        {
+            if (auto node = child.cast<vsg::Node>())
+            {
+                node_group->addChild(node);
+            }
+        }
+    }
+
+    if (!scene)
+    {
+        std::cout<<"No 3D model to render"<<std::endl;
+        return 0;
+    }
+
+    auto numFrames = arguments.value<uint32_t>(-1, "--nf");
+    if (numFrames == 0) return 0;
 
     // create the viewer and assign window(s) to it
     auto viewer = vsg::Viewer::create();
@@ -110,7 +147,7 @@ int main(int argc, char** argv)
     viewer->compile();
 
     // rendering main loop
-    while (viewer->advanceToNextFrame())
+    while (viewer->advanceToNextFrame() && (numFrames < 0 || numFrames-- > 0))
     {
         // pass any events into EventHandlers assigned to the Viewer
         viewer->handleEvents();
