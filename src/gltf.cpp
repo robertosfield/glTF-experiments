@@ -61,19 +61,15 @@ struct JSONParser
 
         while(pos != std::string::npos && pos < buffer.size() && buffer[pos] != ']')
         {
-            vsg::info(indent, "read_array() pos = ", pos, ", buffer[pos] = ", buffer[pos]);
-
             // now look to pair with value after " : "
             if (buffer[pos] == '{')
             {
                 auto value = read_object();
-                vsg::info(indent, "read_array() object value = ", value);
                 if (value) objects->children.push_back(value);
             }
             else if (buffer[pos] == '[')
             {
                 auto value = read_array();
-                vsg::info(indent, "read_array() array value = ", value);
                 if (value) objects->children.push_back(value);
             }
             else if (buffer[pos] == '"')
@@ -85,8 +81,6 @@ struct JSONParser
                 auto value = buffer.substr(pos+1, end_of_value-pos-1);
 
                 pos = end_of_value+1;
-
-                vsg::info(indent, "read_array() string value = ", value);
 
                 objects->children.push_back(vsg::stringValue::create(value));
             }
@@ -105,8 +99,6 @@ struct JSONParser
                 auto value = buffer.substr(pos, end_of_value-pos+1);
 
                 pos = end_of_field;
-
-                vsg::info(indent, "read_array() non string value = ", value);
 
                 objects->children.push_back(vsg::stringValue::create(value));
             }
@@ -141,15 +133,12 @@ struct JSONParser
 
         while(pos != std::string::npos && pos < buffer.size() && buffer[pos] != '}')
         {
-            vsg::info(indent, "read_object() pos = ", pos, ", buffer[pos] = ", buffer[pos]);
-
             if (buffer[pos] == '"')
             {
                 auto end_of_string = buffer.find('"', pos+1);
                 if (end_of_string == std::string::npos) break;
 
                 std::string_view name(&buffer[pos+1], end_of_string-pos-1);
-                vsg::info(indent, "read_object() read name ", name);
 
                 // skip white space
                 pos = buffer.find_first_not_of(" \t\r\n", end_of_string+1);
@@ -170,7 +159,6 @@ struct JSONParser
                 pos = buffer.find_first_not_of(" \t\r\n", pos+1);
                 if (pos == std::string::npos)
                 {
-                    vsg::info(indent, "read_object() failed to skip white space");
                     break;
                 }
 
@@ -179,14 +167,11 @@ struct JSONParser
                 {
                     auto value = read_object();
 
-                    vsg::info(indent, "read_object() object {", std::string(name), ", ", value, "}");
-
                     object->setObject(std::string(name), value);
                 }
                 else if (buffer[pos] == '[')
                 {
                     auto value = read_array();
-                    vsg::info(indent, "read_object() array {", std::string(name), ", ", value, "}");
 
                     object->setObject(std::string(name), value);
                 }
@@ -255,9 +240,6 @@ vsg::ref_ptr<vsg::Object> gltf::_read(std::istream& fin, vsg::ref_ptr<const vsg:
     fin.seekg(0, fin.end);
     size_t fileSize = fin.tellg();
 
-
-    vsg::info("\n\nSTARTING JSON PARSING\n\n");
-
     JSONParser parser;
 
     parser.buffer.resize(fileSize);
@@ -268,9 +250,6 @@ vsg::ref_ptr<vsg::Object> gltf::_read(std::istream& fin, vsg::ref_ptr<const vsg:
     vsg::ref_ptr<vsg::Object> result;
 
     result =  parser.read_object();
-    vsg::info("\n\nCOMPLETED JSON PARSING\n\n");
-
-    vsg::info("result = ", result);
 
     return result;
 }
