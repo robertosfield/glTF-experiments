@@ -287,12 +287,10 @@ vsg::ref_ptr<vsg::Object> json::_read(std::istream& fin, vsg::ref_ptr<const vsg:
 
     if (parser.buffer[parser.pos]=='{')
     {
-        vsg::info("Reading object from position ", parser.pos);
         result =  parser.read_object();
     }
     else if (parser.buffer[parser.pos]=='[')
     {
-        vsg::info("Reading array from position ", parser.pos);
         result =  parser.read_array();
     }
     else
