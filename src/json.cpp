@@ -47,46 +47,6 @@ bool JSONParser::read_string(std::string& value)
     return true;
 }
 
-bool JSONParser::read_number(double& value)
-{
-    auto end_of_field = buffer.find_first_of(",}]", pos+1);
-    if (end_of_field == std::string::npos) return false;
-
-    auto end_of_value = end_of_field - 1;
-    while(end_of_value > 0 && white_space(buffer[end_of_value])) --end_of_value;
-
-    mstr.set(reinterpret_cast<const uint8_t*>(&buffer.at(pos)), end_of_value-pos+1);
-    mstr >> value;
-
-    pos = end_of_field;
-
-    return true;
-}
-
-bool JSONParser::read_bool(bool& value)
-{
-    auto end_of_field = buffer.find_first_of(",}]", pos+1);
-    if (end_of_field == std::string::npos) return false;
-
-    auto end_of_value = end_of_field - 1;
-    while(end_of_value > 0 && white_space(buffer[end_of_value])) --end_of_value;
-
-    if (buffer.compare(pos, end_of_value-pos+1, "true") == 0)
-    {
-        pos = end_of_field;
-        value = true;
-        return true;
-    }
-    else if (buffer.compare(pos, end_of_value-pos+1, "false") == 0)
-    {
-        pos = end_of_field;
-        value = false;
-        return true;
-    }
-
-    return false;
-}
-
 vsg::ref_ptr<vsg::Object> JSONParser::read_array()
 {
     pos = buffer.find_first_not_of(" \t\r\n", pos);
@@ -136,10 +96,35 @@ vsg::ref_ptr<vsg::Object> JSONParser::read_array()
         }
         else
         {
-            if (double value; read_number(value))
+            auto end_of_field = buffer.find_first_of(",}]", pos+1);
+            if (end_of_field == std::string::npos) break;
+
+            auto end_of_value = end_of_field - 1;
+            while(end_of_value > 0 && white_space(buffer[end_of_value])) --end_of_value;
+
+            if (buffer.compare(pos, end_of_value-pos, "null")==0)
             {
+                objects->children.push_back(nullptr);
+            }
+            else if (buffer.compare(pos, end_of_value-pos, "true")==0)
+            {
+                objects->children.push_back(vsg::boolValue::create(true));
+            }
+            else if (buffer.compare(pos, end_of_value-pos, "false")==0)
+            {
+                objects->children.push_back(vsg::boolValue::create(false));
+            }
+            else
+            {
+                mstr.set(reinterpret_cast<const uint8_t*>(&buffer.at(pos)), end_of_value-pos+1);
+
+                double value;
+                mstr >> value;
                 objects->children.push_back(vsg::doubleValue::create(value));
             }
+
+            // skip to end of field
+            pos = end_of_field;
         }
 
         pos = buffer.find_first_not_of(" \t\r\n", pos);
@@ -223,10 +208,36 @@ vsg::ref_ptr<vsg::Object> JSONParser::read_object()
             }
             else
             {
-                if (double value; read_number(value))
+                auto end_of_field = buffer.find_first_of(",}]", pos+1);
+                if (end_of_field == std::string::npos) break;
+
+                auto end_of_value = end_of_field - 1;
+                while(end_of_value > 0 && white_space(buffer[end_of_value])) --end_of_value;
+
+                if (buffer.compare(pos, end_of_value-pos, "null")==0)
                 {
+                    // non op?
+                    object->setObject(std::string(name), nullptr);
+                }
+                else if (buffer.compare(pos, end_of_value-pos, "true")==0)
+                {
+                    object->setValue(std::string(name), true);
+                }
+                else if (buffer.compare(pos, end_of_value-pos, "false")==0)
+                {
+                    object->setValue(std::string(name), false);
+                }
+                else
+                {
+                    mstr.set(reinterpret_cast<const uint8_t*>(&buffer.at(pos)), end_of_value-pos+1);
+
+                    double value;
+                    mstr >> value;
                     object->setValue(std::string(name), value);
                 }
+
+                // skip to end of field
+                pos = end_of_field;
             }
 
         }

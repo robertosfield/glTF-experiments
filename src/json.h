@@ -45,8 +45,6 @@ namespace vsg
         }
 
         bool read_string(std::string& value);
-        bool read_number(double& value);
-        bool read_bool(bool& value);
 
         vsg::ref_ptr<vsg::Object> read_array();
         vsg::ref_ptr<vsg::Object> read_object();
