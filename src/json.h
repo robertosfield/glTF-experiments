@@ -29,6 +29,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace vsg
 {
 
+    // json parser based on spec: https://www.json.org/json-en.html
     struct JSONParser
     {
         std::string buffer;

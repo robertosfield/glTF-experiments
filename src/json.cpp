@@ -72,6 +72,8 @@ vsg::ref_ptr<vsg::Object> JSONParser::read_array()
             auto end_of_value = buffer.find('"', pos+1);
             if (end_of_value == std::string::npos) break;
 
+            // could have escape characters.
+
             auto value = buffer.substr(pos+1, end_of_value-pos-1);
 
             pos = end_of_value+1;
@@ -89,6 +91,8 @@ vsg::ref_ptr<vsg::Object> JSONParser::read_array()
 
             auto end_of_value = end_of_field - 1;
             while(end_of_value > 0 && white_space(buffer[end_of_value])) --end_of_value;
+
+            // could be null, true, false, number
 
             auto value = buffer.substr(pos, end_of_value-pos+1);
 
@@ -175,6 +179,8 @@ vsg::ref_ptr<vsg::Object> JSONParser::read_object()
                 auto end_of_value = buffer.find('"', pos+1);
                 if (end_of_value == std::string::npos) break;
 
+                // could have escape characters.
+
                 auto value = buffer.substr(pos+1, end_of_value-pos-1);
 
                 pos = end_of_value+1;
@@ -188,6 +194,8 @@ vsg::ref_ptr<vsg::Object> JSONParser::read_object()
 
                 auto end_of_value = end_of_field - 1;
                 while(end_of_value > 0 && white_space(buffer[end_of_value])) --end_of_value;
+
+                // could be null, true, false, number
 
                 auto value = buffer.substr(pos, end_of_value - pos + 1);
 
