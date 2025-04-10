@@ -26,7 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/io/ReaderWriter.h>
 #include <vsg/io/mem_stream.h>
 
-namespace vsgXchange
+namespace vsg
 {
 
     struct JSONParser
@@ -46,7 +46,6 @@ namespace vsgXchange
         vsg::ref_ptr<vsg::Object> read_array();
         vsg::ref_ptr<vsg::Object> read_object();
     };
-
 
     /// json ReaderWriter
     class json : public vsg::Inherit<vsg::ReaderWriter, json>

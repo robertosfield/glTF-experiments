@@ -36,7 +36,7 @@ vsg::ref_ptr<vsg::Object> gltf::_read(std::istream& fin, vsg::ref_ptr<const vsg:
 
     if (fileSize==0) return {};
 
-    JSONParser parser;
+    vsg::JSONParser parser;
 
     parser.buffer.resize(fileSize);
 
