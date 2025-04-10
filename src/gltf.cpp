@@ -10,221 +10,15 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 </editor-fold> */
 
+#include "json.h"
 #include "gltf.h"
 
-#include <vsg/core/Objects.h>
-#include <vsg/core/Value.h>
 #include <vsg/io/Path.h>
 #include <vsg/io/mem_stream.h>
 
 #include <fstream>
 
 using namespace vsgXchange;
-
-struct JSONParser
-{
-    std::string buffer;
-    std::size_t pos = 0;
-    vsg::mem_stream mstr;
-    vsg::indentation indent;
-
-    JSONParser() :
-        mstr(nullptr, 0) {}
-
-    inline bool white_space(char c) const
-    {
-        return (c==' ' || c=='\t' || c=='\r' || c=='\n');
-    }
-
-    vsg::ref_ptr<vsg::Object> read_array()
-    {
-        pos = buffer.find_first_not_of(" \t\r\n", pos);
-        if (pos == std::string::npos) return {};
-        if (buffer[pos] != '[')
-        {
-            vsg::info(indent, "read_array() could not match opening [");
-            return {};
-        }
-
-        // buffer[pos] == '['
-        // advance past open bracket
-        pos = buffer.find_first_not_of(" \t\r\n", pos+1);
-        if (pos == std::string::npos)
-        {
-            vsg::info(indent, "read_array() contents after [");
-            return {};
-        }
-
-        indent += 4;
-
-        auto objects = vsg::Objects::create();
-
-        while(pos != std::string::npos && pos < buffer.size() && buffer[pos] != ']')
-        {
-            // now look to pair with value after " : "
-            if (buffer[pos] == '{')
-            {
-                auto value = read_object();
-                if (value) objects->children.push_back(value);
-            }
-            else if (buffer[pos] == '[')
-            {
-                auto value = read_array();
-                if (value) objects->children.push_back(value);
-            }
-            else if (buffer[pos] == '"')
-            {
-                // read string
-                auto end_of_value = buffer.find('"', pos+1);
-                if (end_of_value == std::string::npos) break;
-
-                auto value = buffer.substr(pos+1, end_of_value-pos-1);
-
-                pos = end_of_value+1;
-
-                objects->children.push_back(vsg::stringValue::create(value));
-            }
-            else if (buffer[pos] == ',')
-            {
-                ++pos;
-            }
-            else
-            {
-                auto end_of_field = buffer.find_first_of(",}]", pos+1);
-                if (end_of_field == std::string::npos) break;
-
-                auto end_of_value = end_of_field - 1;
-                while(end_of_value > 0 && white_space(buffer[end_of_value])) --end_of_value;
-
-                auto value = buffer.substr(pos, end_of_value-pos+1);
-
-                pos = end_of_field;
-
-                objects->children.push_back(vsg::stringValue::create(value));
-            }
-
-            pos = buffer.find_first_not_of(" \t\r\n", pos);
-        }
-
-        if (pos < buffer.size() && buffer[pos] == ']')
-        {
-            ++pos;
-        }
-
-        indent -= 4;
-
-        return objects;
-    }
-
-    vsg::ref_ptr<vsg::Object> read_object()
-    {
-        if (pos == std::string::npos) return {};
-        if (buffer[pos] != '{') return {};
-
-        // buffer[pos] == '{'
-        // advance past open bracket
-        pos = buffer.find_first_not_of(" \t\r\n", pos+1);
-        if (pos == std::string::npos) return {};
-
-        indent += 4;
-
-
-        auto object = vsg::Object::create();
-
-        while(pos != std::string::npos && pos < buffer.size() && buffer[pos] != '}')
-        {
-            if (buffer[pos] == '"')
-            {
-                auto end_of_string = buffer.find('"', pos+1);
-                if (end_of_string == std::string::npos) break;
-
-                std::string_view name(&buffer[pos+1], end_of_string-pos-1);
-
-                // skip white space
-                pos = buffer.find_first_not_of(" \t\r\n", end_of_string+1);
-                if (pos == std::string::npos)
-                {
-                    vsg::info(indent, "read_object()  deliminator error end of buffer.");
-                    break;
-                }
-
-                // make sure next charater is the {name : value} deliminator
-                if (buffer[pos] != ':')
-                {
-                    vsg::info(indent, "read_object()  deliminator error buffer[",pos,"] = ", buffer[pos]);
-                    break;
-                }
-
-                // skip white space
-                pos = buffer.find_first_not_of(" \t\r\n", pos+1);
-                if (pos == std::string::npos)
-                {
-                    break;
-                }
-
-                // now look to pair with value after " : "
-                if (buffer[pos] == '{')
-                {
-                    auto value = read_object();
-
-                    object->setObject(std::string(name), value);
-                }
-                else if (buffer[pos] == '[')
-                {
-                    auto value = read_array();
-
-                    object->setObject(std::string(name), value);
-                }
-                else if (buffer[pos] == '"')
-                {
-                    // read string
-                    auto end_of_value = buffer.find('"', pos+1);
-                    if (end_of_value == std::string::npos) break;
-
-                    auto value = buffer.substr(pos+1, end_of_value-pos-1);
-
-                    pos = end_of_value+1;
-
-                    object->setValue(std::string(name), value);
-                }
-                else
-                {
-                    auto end_of_field = buffer.find_first_of(",}]", pos+1);
-                    if (end_of_field == std::string::npos) break;
-
-                    auto end_of_value = end_of_field - 1;
-                    while(end_of_value > 0 && white_space(buffer[end_of_value])) --end_of_value;
-
-                    auto value = buffer.substr(pos, end_of_value - pos + 1);
-
-                    pos = end_of_field;
-
-                    object->setValue(std::string(name), value);
-                }
-
-            }
-            else if (buffer[pos] == ',')
-            {
-                ++pos;
-            }
-            else
-            {
-                vsg::info(indent, "read_object() buffer[", pos, "] = ", buffer[pos]);
-            }
-
-            pos = buffer.find_first_not_of(" \t\r\n", pos);
-        }
-
-        if (pos < buffer.size() && buffer[pos] == '}')
-        {
-            ++pos;
-        }
-
-        indent -= 4;
-
-        return object;
-    }
-};
 
 gltf::gltf()
 {
@@ -240,6 +34,8 @@ vsg::ref_ptr<vsg::Object> gltf::_read(std::istream& fin, vsg::ref_ptr<const vsg:
     fin.seekg(0, fin.end);
     size_t fileSize = fin.tellg();
 
+    if (fileSize==0) return {};
+
     JSONParser parser;
 
     parser.buffer.resize(fileSize);
@@ -249,7 +45,24 @@ vsg::ref_ptr<vsg::Object> gltf::_read(std::istream& fin, vsg::ref_ptr<const vsg:
 
     vsg::ref_ptr<vsg::Object> result;
 
-    result =  parser.read_object();
+    // skip white space
+    parser.pos = parser.buffer.find_first_not_of(" \t\r\n", 0);
+    if (parser.pos == std::string::npos) return {};
+
+    if (parser.buffer[parser.pos]=='{')
+    {
+        vsg::info("Reading object from position ", parser.pos);
+        result =  parser.read_object();
+    }
+    else if (parser.buffer[parser.pos]=='[')
+    {
+        vsg::info("Reading array from position ", parser.pos);
+        result =  parser.read_array();
+    }
+    else
+    {
+        vsg::info("Parsing error, could not find opening { or [.");
+    }
 
     return result;
 }
