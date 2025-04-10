@@ -46,3 +46,6 @@ namespace vsgXchange
     };
 
 }
+
+EVSG_type_name(vsgXchange::gltf)
+

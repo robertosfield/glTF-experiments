@@ -49,6 +49,8 @@ namespace vsg
         vsg::ref_ptr<vsg::Object> read_array();
         vsg::ref_ptr<vsg::Object> read_object();
     };
+    VSG_type_name(vsg::JSONParser)
+
 
     /// json ReaderWriter
     class json : public vsg::Inherit<vsg::ReaderWriter, json>
@@ -66,5 +68,7 @@ namespace vsg
 
         bool getFeatures(Features& features) const override;
     };
+    VSG_type_name(vsg::json)
 
 }
+
