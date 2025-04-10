@@ -30,6 +30,63 @@ JSONParser::JSONParser() :
 {
 }
 
+bool JSONParser::read_string(std::string& value)
+{
+    if (buffer[pos] != '"') return false;
+
+    // read string
+    auto end_of_value = buffer.find('"', pos+1);
+    if (end_of_value == std::string::npos) return false;
+
+    // could have escape characters.
+
+    value = buffer.substr(pos+1, end_of_value-pos-1);
+
+    pos = end_of_value+1;
+
+    return true;
+}
+
+bool JSONParser::read_number(double& value)
+{
+    auto end_of_field = buffer.find_first_of(",}]", pos+1);
+    if (end_of_field == std::string::npos) return false;
+
+    auto end_of_value = end_of_field - 1;
+    while(end_of_value > 0 && white_space(buffer[end_of_value])) --end_of_value;
+
+    mstr.set(reinterpret_cast<const uint8_t*>(&buffer.at(pos)), end_of_value-pos+1);
+    mstr >> value;
+
+    pos = end_of_field;
+
+    return true;
+}
+
+bool JSONParser::read_bool(bool& value)
+{
+    auto end_of_field = buffer.find_first_of(",}]", pos+1);
+    if (end_of_field == std::string::npos) return false;
+
+    auto end_of_value = end_of_field - 1;
+    while(end_of_value > 0 && white_space(buffer[end_of_value])) --end_of_value;
+
+    if (buffer.compare(pos, end_of_value-pos+1, "true") == 0)
+    {
+        pos = end_of_field;
+        value = true;
+        return true;
+    }
+    else if (buffer.compare(pos, end_of_value-pos+1, "false") == 0)
+    {
+        pos = end_of_field;
+        value = false;
+        return true;
+    }
+
+    return false;
+}
+
 vsg::ref_ptr<vsg::Object> JSONParser::read_array()
 {
     pos = buffer.find_first_not_of(" \t\r\n", pos);
@@ -68,17 +125,10 @@ vsg::ref_ptr<vsg::Object> JSONParser::read_array()
         }
         else if (buffer[pos] == '"')
         {
-            // read string
-            auto end_of_value = buffer.find('"', pos+1);
-            if (end_of_value == std::string::npos) break;
-
-            // could have escape characters.
-
-            auto value = buffer.substr(pos+1, end_of_value-pos-1);
-
-            pos = end_of_value+1;
-
-            objects->children.push_back(vsg::stringValue::create(value));
+            if (std::string value; read_string(value))
+            {
+                objects->children.push_back(vsg::stringValue::create(value));
+            }
         }
         else if (buffer[pos] == ',')
         {
@@ -86,19 +136,10 @@ vsg::ref_ptr<vsg::Object> JSONParser::read_array()
         }
         else
         {
-            auto end_of_field = buffer.find_first_of(",}]", pos+1);
-            if (end_of_field == std::string::npos) break;
-
-            auto end_of_value = end_of_field - 1;
-            while(end_of_value > 0 && white_space(buffer[end_of_value])) --end_of_value;
-
-            // could be null, true, false, number
-
-            auto value = buffer.substr(pos, end_of_value-pos+1);
-
-            pos = end_of_field;
-
-            objects->children.push_back(vsg::stringValue::create(value));
+            if (double value; read_number(value))
+            {
+                objects->children.push_back(vsg::doubleValue::create(value));
+            }
         }
 
         pos = buffer.find_first_not_of(" \t\r\n", pos);
@@ -175,33 +216,17 @@ vsg::ref_ptr<vsg::Object> JSONParser::read_object()
             }
             else if (buffer[pos] == '"')
             {
-                // read string
-                auto end_of_value = buffer.find('"', pos+1);
-                if (end_of_value == std::string::npos) break;
-
-                // could have escape characters.
-
-                auto value = buffer.substr(pos+1, end_of_value-pos-1);
-
-                pos = end_of_value+1;
-
-                object->setValue(std::string(name), value);
+                if (std::string value; read_string(value))
+                {
+                    object->setValue(std::string(name), value);
+                }
             }
             else
             {
-                auto end_of_field = buffer.find_first_of(",}]", pos+1);
-                if (end_of_field == std::string::npos) break;
-
-                auto end_of_value = end_of_field - 1;
-                while(end_of_value > 0 && white_space(buffer[end_of_value])) --end_of_value;
-
-                // could be null, true, false, number
-
-                auto value = buffer.substr(pos, end_of_value - pos + 1);
-
-                pos = end_of_field;
-
-                object->setValue(std::string(name), value);
+                if (double value; read_number(value))
+                {
+                    object->setValue(std::string(name), value);
+                }
             }
 
         }
