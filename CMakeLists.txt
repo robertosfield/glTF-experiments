@@ -19,7 +19,7 @@ if (VULKAN_SDK)
     set(ENV{VULKAN_SDK} ${VULKAN_SDK})
 endif()
 
-find_package(vsg 1.0.0 REQUIRED)
+find_package(vsg 1.1.11 REQUIRED)
 
 # find the optional vsgXchange that can be used for reading a range of image and 3d model formats and shader compilation
 find_package(vsgXchange 1.0.0 QUIET)
@@ -33,7 +33,6 @@ add_custom_target(clobber
 )
 
 set(SOURCES
-    src/json.cpp
     src/gltf.cpp
     src/main.cpp
 )

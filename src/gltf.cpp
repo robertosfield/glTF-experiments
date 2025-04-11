@@ -10,7 +10,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 </editor-fold> */
 
-#include "json.h"
+#include <vsg/io/json.h>
+
 #include "gltf.h"
 
 #include <vsg/io/Path.h>
