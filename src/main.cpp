@@ -6,7 +6,6 @@
 
 #include <iostream>
 
-#include "json.h"
 #include "gltf.h"
 
 int main(int argc, char** argv)
@@ -31,7 +30,6 @@ int main(int argc, char** argv)
 
     if (arguments.errors()) return arguments.writeErrorMessages(std::cerr);
 
-    options->add(vsg::json::create());
     options->add(vsgXchange::gltf::create());
 
     if (!arguments.read("--clean"))
