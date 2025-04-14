@@ -134,10 +134,33 @@ struct accessors_schema : public vsg2::ArraySchema
     }
 };
 
+struct asset_scheme : public vsg2::ObjectSchema
+{
+    std::string copyright;
+    std::string version;
+    std::string generator;
+    std::string minVersion;
+
+    void report()
+    {
+        vsg::info("asset_scheme = { copyright = ", copyright, ", generator = ", generator, ", version = ", version, ", minVersion = ", minVersion, " } ", this);
+    }
+
+    void read_string(JSONParser& parser, const std::string_view& name) override
+    {
+        if (name=="copyright") { parser.read_string(copyright); }
+        else if (name=="generator") { parser.read_string(generator); }
+        else if (name=="version") { parser.read_string(version); }
+        else if (name=="minVersion") { parser.read_string(minVersion); }
+        else vsg::warn("F gltf parsing error, position = ", parser.pos);
+    }
+};
+
 
 struct glTF_schema : public vsg2::ObjectSchema
 {
     accessors_schema accessors;
+    asset_scheme asset;
 
     void read_array(JSONParser& parser, const std::string_view& name) override;
     void read_object(JSONParser& parser, const std::string_view& name) override;
@@ -235,9 +258,9 @@ void glTF_schema::read_object(JSONParser& parser, const std::string_view& name)
 {
     if (name == "asset")
     {
-        vsg::info("need to implement asset schema (",name,") ");
-        parser.read_object(*this);
+        parser.read_object(asset);
 
+        asset.report();
     }
     else if (name == "scene")
     {
