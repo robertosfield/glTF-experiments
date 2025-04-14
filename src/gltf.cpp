@@ -35,6 +35,10 @@ struct container_schema : public vsg2::ArraySchema
     }
 };
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// accessor_schema
+//
 struct accessor_schema : public vsg2::ObjectSchema
 {
     uint32_t bufferView = 0;
@@ -67,32 +71,9 @@ struct accessor_schema : public vsg2::ObjectSchema
 
     void read_array(JSONParser& parser, const std::string_view& name) override
     {
-        if (name == "max")
-        {
-            parser.read_array(max);
-        }
-        else if (name == "min")
-        {
-            parser.read_array(max);
-        }
+        if (name == "max") parser.read_array(max);
+        else if (name == "min") parser.read_array(max);
         else vsg::warn("A gltf parsing error, position = ", parser.pos);
-    }
-
-    void read_object(JSONParser& parser, const std::string_view& name) override
-    {
-        if (name == "sparse")
-        {
-        }
-        else if (name == "name")
-        {
-        }
-        else if (name == "extensions")
-        {
-        }
-        else if (name == "extras")
-        {
-        }
-        else vsg::warn("B gltf parsing error, position = ", parser.pos);
     }
 
     void read_string(JSONParser& parser, const std::string_view& name) override
@@ -134,6 +115,10 @@ struct accessors_schema : public vsg2::ArraySchema
     }
 };
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// asset_schema
+//
 struct asset_scheme : public vsg2::ObjectSchema
 {
     std::string copyright;
@@ -156,11 +141,176 @@ struct asset_scheme : public vsg2::ObjectSchema
     }
 };
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// bufferViews_schema
+//
+struct bufferView_schema : public vsg2::ObjectSchema
+{
+    uint32_t buffer = 0;
+    uint32_t byteOffset = 0;
+    uint32_t byteLength = 0;
+    uint32_t byteStride = 4;
+    uint32_t target = 0;
 
+    // name
+    // extensions
+    // extras
+
+    void report()
+    {
+        vsg::info("bufferView_schema { ");
+        vsg::info("    buffer: ", buffer);
+        vsg::info("    byteOffset: ", byteOffset);
+        vsg::info("    byteLength: ", byteLength);
+        vsg::info("    byteStride: ", byteStride);
+        vsg::info("    target: ", target);
+        vsg::info("} ");
+    }
+
+    void read_number(JSONParser& parser, const std::string_view& name, std::istream& input) override
+    {
+        if (name=="buffer") input >> buffer;
+        else if (name=="byteOffset") input >> byteOffset;
+        else if (name=="byteLength") input >> byteLength;
+        else if (name=="byteStride") input >> byteStride;
+        else if (name=="target") input >> target;
+        else vsg::warn("H gltf parsing error, position = ", parser.pos, ", name = ", name);
+    }
+};
+
+struct bufferViews_schema : public vsg2::ArraySchema
+{
+    std::vector<bufferView_schema> bufferViews;
+
+    void read_object(JSONParser& parser) override
+    {
+        vsg::info("accessors_schema::read_object()", this);
+
+        bufferViews.emplace_back();
+        parser.read_object(bufferViews.back());
+
+        vsg::info("done accessors_schema::read_object()", &bufferViews.back());
+        bufferViews.back().report();
+    }
+};
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// buffers_schema
+//
+struct buffer_schema : public vsg2::ObjectSchema
+{
+    std::string uri;
+    uint32_t byteLength = 0;
+
+    // name
+    // extensions
+    // extras
+
+    void report()
+    {
+        vsg::info("buffer_schema { ");
+        vsg::info("    uri: ", uri);
+        vsg::info("    byteLength: ", byteLength);
+        vsg::info("} ");
+    }
+
+
+    void read_string(JSONParser& parser, const std::string_view& name) override
+    {
+        if (name=="uri" && parser.read_string(uri)) {}
+        else vsg::warn("J gltf parsing error, position = ", parser.pos);
+    }
+
+    void read_number(JSONParser& parser, const std::string_view& name, std::istream& input) override
+    {
+        if (name=="byteLength") input >> byteLength;
+        else vsg::warn("K gltf parsing error, position = ", parser.pos, ", name = ", name);
+    }
+};
+
+struct buffers_schema : public vsg2::ArraySchema
+{
+    std::vector<buffer_schema> buffers;
+
+    void read_object(JSONParser& parser) override
+    {
+        vsg::info("buffers_schema::read_object()", this);
+
+        buffers.emplace_back();
+        parser.read_object(buffers.back());
+
+        vsg::info("done buffers_schema::read_object()", &buffers.back());
+        buffers.back().report();
+    }
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// images_schema
+//
+struct image_schema : public vsg2::ObjectSchema
+{
+    std::string uri;
+    std::string mimeType;
+    uint32_t bufferView = 0;
+
+    // name
+    // extensions
+    // extras
+
+    void report()
+    {
+        vsg::info("image_schema { ");
+        vsg::info("    uri: ", uri);
+        vsg::info("    mimeType: ", mimeType);
+        vsg::info("    bufferView: ", bufferView);
+        vsg::info("} ");
+    }
+
+    void read_string(JSONParser& parser, const std::string_view& name) override
+    {
+        if (name=="uri" && parser.read_string(uri)) {}
+        else if (name=="mimeType" && parser.read_string(mimeType)) {}
+        else vsg::warn("L gltf parsing error, position = ", parser.pos);
+    }
+
+    void read_number(JSONParser& parser, const std::string_view& name, std::istream& input) override
+    {
+        if (name=="bufferView") input >> bufferView;
+        else vsg::warn("M gltf parsing error, position = ", parser.pos, ", name = ", name);
+    }
+};
+
+struct images_schema : public vsg2::ArraySchema
+{
+    std::vector<image_schema> images;
+
+    void read_object(JSONParser& parser) override
+    {
+        vsg::info("images_schema::read_object()", this);
+
+        images.emplace_back();
+        parser.read_object(images.back());
+
+        vsg::info("done images_schema::read_object()", &images.back());
+        images.back().report();
+    }
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// glTF_schema
+//
 struct glTF_schema : public vsg2::ObjectSchema
 {
     accessors_schema accessors;
     asset_scheme asset;
+    bufferViews_schema bufferViews;
+    buffers_schema buffers;
+    images_schema images;
 
     void read_array(JSONParser& parser, const std::string_view& name) override;
     void read_object(JSONParser& parser, const std::string_view& name) override;
@@ -184,7 +334,6 @@ void glTF_schema::read_array(JSONParser& parser, const std::string_view& name)
     }
     else if (name == "accessors")
     {
-        vsg::info("accessors schema required (",name,") ");
         parser.read_array(accessors);
     }
     else if (name == "animations")
@@ -194,13 +343,11 @@ void glTF_schema::read_array(JSONParser& parser, const std::string_view& name)
     }
     else if (name == "buffers")
     {
-        vsg::info("buffers schema required (",name,") ");
-        // parser.read_array(*this);
+        parser.read_array(buffers);
     }
     else if (name == "bufferViews")
     {
-        vsg::info("bufferViews schema required (",name,") ");
-        // parser.read_array(*this);
+        parser.read_array(bufferViews);
     }
     else if (name == "cameras")
     {
@@ -241,6 +388,10 @@ void glTF_schema::read_array(JSONParser& parser, const std::string_view& name)
     {
         vsg::info("skins schema required (",name,") ");
         // parser.read_array(*this);
+    }
+    else if (name == "images")
+    {
+        parser.read_array(images);
     }
     else if (name == "textures")
     {
@@ -312,7 +463,10 @@ void glTF_schema::read_null(JSONParser& parser, const std::string_view& name)
     vsg::info("read_null(",name,")");
 }
 
-
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// gltf
+//
 gltf::gltf()
 {
 }
