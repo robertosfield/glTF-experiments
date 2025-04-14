@@ -33,6 +33,7 @@ add_custom_target(clobber
 )
 
 set(SOURCES
+    src/JSONParser.cpp
     src/gltf.cpp
     src/main.cpp
 )
