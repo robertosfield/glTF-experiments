@@ -349,6 +349,13 @@ struct pbrMetallicRoughness_schema : public vsg2::ObjectSchema
 
 struct normalTextureInfo_schema : public textureInfo_schema
 {
+    double scale = 1.0;
+
+    void read_number(JSONParser& parser, const std::string_view& property, std::istream& input) override
+    {
+        read_number(parser, property, input);
+        if (property == "scale") input >> scale;
+    }
 };
 
 struct occlusionTextureInfo_schema : public textureInfo_schema
@@ -381,6 +388,14 @@ struct material_schema : public vsg2::ObjectSchema
     {
         vsg::info("material_schema { ");
         vsg::info("    name: ", name);
+        vsg::info("    pbrMetallicRoughness.baseColorFactor = ", pbrMetallicRoughness.baseColorFactor.values.size(), " }" );
+        vsg::info("    pbrMetallicRoughness.baseColorTexture = { ", pbrMetallicRoughness.baseColorTexture.index, ", ", pbrMetallicRoughness.baseColorTexture.texCoord, " }" );
+        vsg::info("    pbrMetallicRoughness.metallicFactor ", pbrMetallicRoughness.metallicFactor);
+        vsg::info("    pbrMetallicRoughness.roughnessFactor ", pbrMetallicRoughness.roughnessFactor);
+        vsg::info("    pbrMetallicRoughness.metallicRoughnessTexture = { ", pbrMetallicRoughness.metallicRoughnessTexture.index, ", ", pbrMetallicRoughness.metallicRoughnessTexture.texCoord, " }" );
+        vsg::info("    normalTexture = { ", normalTexture.index, ", ", normalTexture.texCoord, " }");
+        vsg::info("    occlusionTexture = { ", occlusionTexture.index, ", ", occlusionTexture.texCoord, " }");
+        vsg::info("    emissiveTexture = { ", emissiveTexture.index, ", ", emissiveTexture.texCoord, " }");
         vsg::info("    emissiveFactor : ", emissiveFactor.values.size(), " {");
         for(auto value : emissiveFactor.values) vsg::info("     ", value);
         vsg::info("    }");
@@ -437,6 +452,118 @@ struct materials_schema : public vsg2::ArraySchema
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+// meshes_schema
+//
+struct attributes_schema : public vsg2::ObjectSchema
+{
+    std::map<std::string, uint32_t> values;
+
+    void read_number(JSONParser&, const std::string_view& property, std::istream& input) override
+    {
+        input >> values[std::string(property)];
+    }
+};
+
+struct primitive_schema : public vsg2::ObjectSchema
+{
+    attributes_schema attributes;
+    uint32_t indices = 0;
+    uint32_t material = 0;
+    uint32_t mode = 0;
+
+    void read_object(JSONParser& parser, const std::string_view& property) override
+    {
+        if (property == "attributes") parser.read_object(attributes);
+    }
+
+    void read_number(JSONParser&, const std::string_view& property, std::istream& input) override
+    {
+        if (property == "indices") input >> indices;
+        else if (property == "material") input >> material;
+        else if (property == "mode") input >> mode;
+    }
+
+    void report()
+    {
+        vsg::info("primitive_schema { ");
+        vsg::info("    attributes = {");
+        for(auto& [semantic, value] : attributes.values) vsg::info("        ", semantic, ", ", value);
+        vsg::info("    }");
+        vsg::info("    indices = ", indices);
+        vsg::info("    material = ", material);
+        vsg::info("    mode = ", mode);
+        vsg::info("} ");
+    }
+};
+
+struct primitives_schema : public vsg2::ArraySchema
+{
+    std::vector<primitive_schema> primitives;
+
+    void read_object(JSONParser& parser) override
+    {
+        vsg::info("primitives_schema::read_object()", this);
+
+        primitives.emplace_back();
+        parser.read_object(primitives.back());
+
+        vsg::info("done primitives_schema::read_object()", &primitives.back());
+        primitives.back().report();
+    }
+};
+
+
+struct mesh_schema : public vsg2::ObjectSchema
+{
+    std::string name;
+    primitives_schema primitives;
+    container_schema<double> weights;
+
+    // extensions
+    // extras
+
+    void report()
+    {
+        vsg::info("mesh_schema { ");
+        vsg::info("    name: ", name);
+        vsg::info("    primitives: ", primitives.primitives.size());
+        vsg::info("    weights: ", weights.values.size());
+        vsg::info("} ");
+    }
+
+    void read_array(JSONParser& parser, const std::string_view& property) override
+    {
+        if (property == "primitives") parser.read_array(primitives);
+        if (property == "weights") parser.read_array(weights);
+        else vsg::warn("A gltf parsing error, position = ", parser.pos);
+    }
+
+    void read_string(JSONParser& parser, const std::string_view& property) override
+    {
+        if (property=="name" && parser.read_string(name)) {}
+        else vsg::warn("L gltf parsing error, position = ", parser.pos);
+    }
+};
+
+struct meshes_schema : public vsg2::ArraySchema
+{
+    std::vector<mesh_schema> meshes;
+
+    void read_object(JSONParser& parser) override
+    {
+        vsg::info("meshes_schema::read_object()", this);
+
+        meshes.emplace_back();
+        parser.read_object(meshes.back());
+
+        vsg::info("done meshes_schema::read_object()", &meshes.back());
+        meshes.back().report();
+    }
+};
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
 // glTF_schema
 //
 struct glTF_schema : public vsg2::ObjectSchema
@@ -447,6 +574,7 @@ struct glTF_schema : public vsg2::ObjectSchema
     buffers_schema buffers;
     images_schema images;
     materials_schema materials;
+    meshes_schema meshes;
 
     void read_array(JSONParser& parser, const std::string_view& name) override;
     void read_object(JSONParser& parser, const std::string_view& name) override;
@@ -490,19 +618,13 @@ void glTF_schema::read_array(JSONParser& parser, const std::string_view& name)
         vsg::info("cameras schema required (",name,") ");
         // parser.read_array(*this);
     }
-    else if (name == "")
-    {
-        vsg::info(" schema required (",name,") ");
-        // parser.read_array(*this);
-    }
     else if (name == "materials")
     {
         parser.read_array(materials);
     }
     else if (name == "meshes")
     {
-        vsg::info("meshes schema required (",name,") ");
-        // parser.read_array(*this);
+        parser.read_array(meshes);
     }
     else if (name == "nodes")
     {
