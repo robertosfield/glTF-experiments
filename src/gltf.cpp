@@ -302,6 +302,141 @@ struct images_schema : public vsg2::ArraySchema
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+// materials_schema
+//
+
+struct textureInfo_schema : public vsg2::ObjectSchema
+{
+    uint32_t index = 0;
+    uint32_t texCoord = 0;
+
+    void read_number(JSONParser& parser, const std::string_view& property, std::istream& input) override
+    {
+        if (property=="index") input >> index;
+        else if (property=="texCoord") input >> texCoord;
+        else vsg::warn("O gltf parsing error, position = ", parser.pos, ", property = ", property);
+    }
+};
+
+struct pbrMetallicRoughness_schema : public vsg2::ObjectSchema
+{
+    container_schema<double> baseColorFactor; // default { 1.0, 1.0, 1.0, 1.0 }
+    textureInfo_schema baseColorTexture;
+    double metallicFactor = 1.0;
+    double roughnessFactor = 1.0;
+    textureInfo_schema metallicRoughnessTexture;
+
+    void read_array(JSONParser& parser, const std::string_view& property) override
+    {
+        if (property == "baseColorFactor") parser.read_array(baseColorFactor);
+        else vsg::warn("A gltf parsing error, position = ", parser.pos);
+    }
+
+    void read_object(JSONParser& parser, const std::string_view& property) override
+    {
+        if (property == "baseColorTexture") parser.read_object(baseColorTexture);
+        else if (property == "metallicRoughnessTexture") parser.read_object(metallicRoughnessTexture);
+        else vsg::warn("NN gltf parsing error, position = ", parser.pos);
+    }
+
+    void read_number(JSONParser& parser, const std::string_view& property, std::istream& input) override
+    {
+        if (property=="metallicFactor") input >> metallicFactor;
+        else if (property=="roughnessFactor") input >> roughnessFactor;
+        else vsg::warn("O gltf parsing error, position = ", parser.pos, ", property = ", property);
+    }
+};
+
+struct normalTextureInfo_schema : public textureInfo_schema
+{
+};
+
+struct occlusionTextureInfo_schema : public textureInfo_schema
+{
+    double strength = 1.0;
+
+    void read_number(JSONParser& parser, const std::string_view& property, std::istream& input) override
+    {
+        read_number(parser, property, input);
+        if (property == "strength") input >> strength;
+    }
+};
+
+struct material_schema : public vsg2::ObjectSchema
+{
+    std::string name;
+    pbrMetallicRoughness_schema pbrMetallicRoughness;
+    normalTextureInfo_schema normalTexture;
+    occlusionTextureInfo_schema occlusionTexture;
+    textureInfo_schema emissiveTexture;
+    container_schema<double> emissiveFactor; // default { 0.0, 0.0, 0.0 }
+    std::string alphaMode = "OPAQUE";
+    double alphaCutoff = 0.5;
+    bool doubleSided = false;
+
+    // extensions
+    // extras
+
+    void report()
+    {
+        vsg::info("material_schema { ");
+        vsg::info("    name: ", name);
+        vsg::info("    emissiveFactor : ", emissiveFactor.values.size(), " {");
+        for(auto value : emissiveFactor.values) vsg::info("     ", value);
+        vsg::info("    }");
+        vsg::info("    alphaMode : ", alphaMode);
+        vsg::info("    alphaCutoff : ", alphaCutoff);
+        vsg::info("    doubleSided : ", doubleSided);
+        vsg::info("} ");
+    }
+
+    void read_array(JSONParser& parser, const std::string_view& property) override
+    {
+        if (name == "emissiveFactor") parser.read_array(emissiveFactor);
+        else vsg::warn("A gltf parsing error, position = ", parser.pos);
+    }
+
+    void read_object(JSONParser& parser, const std::string_view& property) override
+    {
+        if (property == "pbrMetallicRoughness") parser.read_object(pbrMetallicRoughness);
+        else if (property == "normalTexture") parser.read_object(normalTexture);
+        else if (property == "occlusionTexture") parser.read_object(occlusionTexture);
+        else if (property == "emissiveTexture") parser.read_object(emissiveTexture);
+        else vsg::warn("NN gltf parsing error, position = ", parser.pos);
+    }
+
+    void read_string(JSONParser& parser, const std::string_view& property) override
+    {
+        if (property=="name" && parser.read_string(name)) {}
+        else if (property=="alphaMode" && parser.read_string(alphaMode)) {}
+        else vsg::warn("N gltf parsing error, position = ", parser.pos);
+    }
+
+    void read_number(JSONParser& parser, const std::string_view& property, std::istream& input) override
+    {
+        if (property=="alphaCutoff") input >> alphaCutoff;
+        else vsg::warn("O gltf parsing error, position = ", parser.pos, ", property = ", property);
+    }
+};
+
+struct materials_schema : public vsg2::ArraySchema
+{
+    std::vector<material_schema> materials;
+
+    void read_object(JSONParser& parser) override
+    {
+        vsg::info("materials_schema::read_object()", this);
+
+        materials.emplace_back();
+        parser.read_object(materials.back());
+
+        vsg::info("done materials_schema::read_object()", &materials.back());
+        materials.back().report();
+    }
+};
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
 // glTF_schema
 //
 struct glTF_schema : public vsg2::ObjectSchema
@@ -311,6 +446,7 @@ struct glTF_schema : public vsg2::ObjectSchema
     bufferViews_schema bufferViews;
     buffers_schema buffers;
     images_schema images;
+    materials_schema materials;
 
     void read_array(JSONParser& parser, const std::string_view& name) override;
     void read_object(JSONParser& parser, const std::string_view& name) override;
@@ -361,8 +497,7 @@ void glTF_schema::read_array(JSONParser& parser, const std::string_view& name)
     }
     else if (name == "materials")
     {
-        vsg::info("materials schema required (",name,") ");
-        // parser.read_array(*this);
+        parser.read_array(materials);
     }
     else if (name == "meshes")
     {
