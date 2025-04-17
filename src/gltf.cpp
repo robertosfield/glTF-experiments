@@ -84,6 +84,7 @@ inline std::istream& operator>>(std::istream& input, glTFid& id)
 //
 struct accessor_schema : public vsg2::JSONParser::Schema
 {
+    std::string name;
     glTFid bufferView;
     uint32_t byteOffset = 0;
     uint32_t componentType = 0;
@@ -94,7 +95,6 @@ struct accessor_schema : public vsg2::JSONParser::Schema
     values_schema<double> min;
 
     // sparse
-    // name
     // extensions
     // extras
 
@@ -112,16 +112,17 @@ struct accessor_schema : public vsg2::JSONParser::Schema
         vsg::info("} ");
     }
 
-    void read_array(JSONParser& parser, const std::string_view& name) override
+    void read_array(JSONParser& parser, const std::string_view& property) override
     {
-        if (name == "max") parser.read_array(max);
-        else if (name == "min") parser.read_array(max);
+        if (property == "max") parser.read_array(max);
+        else if (property == "min") parser.read_array(max);
         else parser.warning();
     }
 
-    void read_string(JSONParser& parser, const std::string_view& name) override
+    void read_string(JSONParser& parser, const std::string_view& property) override
     {
-        if (name=="type") parser.read_string(type);
+        if (property=="name") parser.read_string(name);
+        else if (property=="type") parser.read_string(type);
         else parser.warning();
     }
 
@@ -587,15 +588,44 @@ struct sampler_schema : public vsg2::JSONParser::Schema
         else parser.warning();
     }
 
-    void read_number(JSONParser& parser, const std::string_view& name, std::istream& input) override
+    void read_number(JSONParser& parser, const std::string_view& property, std::istream& input) override
     {
-        if (name=="minFilter") input >> minFilter;
-        else if (name=="magFilter") input >> magFilter;
-        else if (name=="wrapS") input >> wrapS;
-        else if (name=="wrapT") input >> wrapT;
+        if (property=="minFilter") input >> minFilter;
+        else if (property=="magFilter") input >> magFilter;
+        else if (property=="wrapS") input >> wrapS;
+        else if (property=="wrapT") input >> wrapT;
         else parser.warning();
     }
 };
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// scene_schema
+//
+struct scene_schema : public vsg2::JSONParser::Schema
+{
+    std::string name;
+    values_schema<glTFid> nodes;
+
+    void report()
+    {
+        vsg::info("scene_schema = { name = ", name, ", nodes = ", nodes.values.size(), " } ", this);
+    }
+
+    void read_array(JSONParser& parser, const std::string_view& property) override
+    {
+        if (property == "nodes") parser.read_array(nodes);
+        else parser.warning();
+    }
+
+    void read_string(JSONParser& parser, const std::string_view& property) override
+    {
+        if (property=="name") parser.read_string(name);
+        else parser.warning();
+    }
+};
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -612,9 +642,12 @@ struct glTF_schema : public vsg2::JSONParser::Schema
     objects_schema<mesh_schema> meshes;
     objects_schema<node_schema> nodes;
     objects_schema<sampler_schema> samplers;
+    glTFid scene;
+    objects_schema<scene_schema> scenes;
 
-    void read_array(JSONParser& parser, const std::string_view& name) override;
-    void read_object(JSONParser& parser, const std::string_view& name) override;
+    void read_array(JSONParser& parser, const std::string_view& property) override;
+    void read_object(JSONParser& parser, const std::string_view& property) override;
+    void read_number(JSONParser& parser, const std::string_view& property, std::istream& input) override;
 
     void report()
     {
@@ -627,6 +660,8 @@ struct glTF_schema : public vsg2::JSONParser::Schema
         meshes.report();
         nodes.report();
         samplers.report();
+        vsg::info("scene = ", scene);
+        scenes.report();
     }
 };
 
@@ -659,11 +694,7 @@ void glTF_schema::read_array(JSONParser& parser, const std::string_view& name)
     else if (name == "meshes") parser.read_array(meshes);
     else if (name == "nodes") parser.read_array(nodes);
     else if (name == "samplers") parser.read_array(samplers);
-    else if (name == "scenes")
-    {
-        vsg::info("scenes schema required (",name,") ");
-        // parser.read_array(*this);
-    }
+    else if (name == "scenes") { parser.read_array(scenes); }
     else if (name == "skins")
     {
         vsg::info("skins schema required (",name,") ");
@@ -682,35 +713,31 @@ void glTF_schema::read_array(JSONParser& parser, const std::string_view& name)
     }
 }
 
-void glTF_schema::read_object(JSONParser& parser, const std::string_view& name)
+void glTF_schema::read_object(JSONParser& parser, const std::string_view& property)
 {
-    if (name == "asset")
+    if (property == "asset") parser.read_object(asset);
+    else if (property == "extensions")
     {
-        parser.read_object(asset);
-
-        asset.report();
-    }
-    else if (name == "scene")
-    {
-        vsg::info("need to implement scene schema (",name,") ");
-        parser.read_object(*this);
-    }
-    else if (name == "extensions")
-    {
-        vsg::info("need to implement extensions schema (",name,") ");
+        vsg::info("need to implement extensions schema (",property,") ");
         parser.read_object(*this);
 
     }
-    else if (name == "extras")
+    else if (property == "extras")
     {
-        vsg::info("need to implement extras schema (",name,") ");
+        vsg::info("need to implement extras schema (",property,") ");
         parser.read_object(*this);
     }
     else
     {
-        vsg::info("read_object(",name,") ");
+        vsg::info("read_object(",property,") ");
         parser.read_object(*this);
     }
+}
+
+void glTF_schema::read_number(JSONParser& parser, const std::string_view& property, std::istream& input)
+{
+    if (property == "scene") input >> scene;
+    else parser.warning();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
