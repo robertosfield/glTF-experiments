@@ -629,6 +629,36 @@ struct scene_schema : public vsg2::JSONParser::Schema
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+// texture_schema
+//
+struct texture_schema : public vsg2::JSONParser::Schema
+{
+    std::string name;
+    glTFid sampler;
+    glTFid source;
+
+    void report()
+    {
+        vsg::info("texture_schema = { name = ", name, ", sampler = ", sampler, ", ", source, " } ", this);
+    }
+
+    void read_string(JSONParser& parser, const std::string_view& property) override
+    {
+        if (property=="name") parser.read_string(name);
+        else parser.warning();
+    }
+
+    void read_number(JSONParser& parser, const std::string_view& property, std::istream& input) override
+    {
+        if (property=="sampler") input >> sampler;
+        else if (property=="source") input >> source;
+        else parser.warning();
+    }
+};
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
 // glTF_schema
 //
 struct glTF_schema : public vsg2::JSONParser::Schema
@@ -644,6 +674,7 @@ struct glTF_schema : public vsg2::JSONParser::Schema
     objects_schema<sampler_schema> samplers;
     glTFid scene;
     objects_schema<scene_schema> scenes;
+    objects_schema<texture_schema> textures;
 
     void read_array(JSONParser& parser, const std::string_view& property) override;
     void read_object(JSONParser& parser, const std::string_view& property) override;
@@ -662,6 +693,7 @@ struct glTF_schema : public vsg2::JSONParser::Schema
         samplers.report();
         vsg::info("scene = ", scene);
         scenes.report();
+        textures.report();
     }
 };
 
@@ -670,25 +702,21 @@ void glTF_schema::read_array(JSONParser& parser, const std::string_view& propert
     if (property == "extensionsUsed")
     {
         vsg::info("extensionsUsed schema required (",property,") ");
-        // parser.read_array(*this);
     }
     else if (property == "extensionsRequired")
     {
         vsg::info("extensionsRequired schema required (",property,") ");
-        // parser.read_array(*this);
     }
     else if (property == "accessors") parser.read_array(accessors);
     else if (property == "animations")
     {
         vsg::info("animations schema required (",property,") ");
-        // parser.read_array(*this);
     }
     else if (property == "buffers") parser.read_array(buffers);
     else if (property == "bufferViews") parser.read_array(bufferViews);
     else if (property == "cameras")
     {
         vsg::info("cameras schema required (",property,") ");
-        // parser.read_array(*this);
     }
     else if (property == "materials") parser.read_array(materials);
     else if (property == "meshes") parser.read_array(meshes);
@@ -698,40 +726,16 @@ void glTF_schema::read_array(JSONParser& parser, const std::string_view& propert
     else if (property == "skins")
     {
         vsg::info("skins schema required (",property,") ");
-        // parser.read_array(*this);
     }
     else if (property == "images") parser.read_array(images);
-    else if (property == "textures")
-    {
-        vsg::info("textures schema required (",property,") ");
-        // parser.read_array(*this);
-    }
-    else
-    {
-        vsg::info("read_array(",property,") ");
-        //parser.read_array(*this);
-    }
+    else if (property == "textures") parser.read_array(textures);
+    else parser.warning();
 }
 
 void glTF_schema::read_object(JSONParser& parser, const std::string_view& property)
 {
     if (property == "asset") parser.read_object(asset);
-    else if (property == "extensions")
-    {
-        vsg::info("need to implement extensions schema (",property,") ");
-        parser.read_object(*this);
-
-    }
-    else if (property == "extras")
-    {
-        vsg::info("need to implement extras schema (",property,") ");
-        parser.read_object(*this);
-    }
-    else
-    {
-        vsg::info("read_object(",property,") ");
-        parser.read_object(*this);
-    }
+    else parser.warning();
 }
 
 void glTF_schema::read_number(JSONParser& parser, const std::string_view& property, std::istream& input)
