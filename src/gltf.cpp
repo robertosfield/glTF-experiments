@@ -35,6 +35,18 @@ struct container_schema : public vsg2::JSONParser::Schema
     }
 };
 
+struct glTFid
+{
+    static const uint32_t invalid_value = std::numeric_limits<uint32_t>::max();
+
+    uint32_t value = invalid_value;
+
+    bool valid() const { return value != invalid_value; }
+
+    explicit operator bool() const noexcept { return valid(); }
+};
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // accessor_schema
@@ -563,6 +575,85 @@ struct meshes_schema : public vsg2::JSONParser::Schema
     }
 };
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// nodes_schema
+//
+struct node_schema : public vsg2::JSONParser::Schema
+{
+    std::string name;
+
+    glTFid camera;
+    glTFid skin;
+    glTFid mesh;
+    container_schema<uint32_t> children;
+    container_schema<double> matrix;
+    container_schema<double> rotation;
+    container_schema<double> scale;
+    container_schema<double> translation;
+    container_schema<double> weights;
+
+    // extensions
+    // extras
+
+    void report()
+    {
+        vsg::info("node_schema { ");
+        vsg::info("    name: ", name);
+        if (camera) vsg::info("    camera: ", camera.value);
+        if (skin) vsg::info("    skin: ", skin.value);
+        if (mesh) vsg::info("    mesh: ", mesh.value);
+        vsg::info("    children: ", children.values.size());
+        vsg::info("    matrix: ", matrix.values.size());
+        vsg::info("    rotation: ", rotation.values.size());
+        vsg::info("    scale: ", scale.values.size());
+        vsg::info("    translation: ", translation.values.size());
+        vsg::info("    weights: ", weights.values.size());
+        vsg::info("} ");
+    }
+
+    void read_array(JSONParser& parser, const std::string_view& property) override
+    {
+        if (property == "children") parser.read_array(children);
+        else if (property == "matrix") parser.read_array(matrix);
+        else if (property == "rotation") parser.read_array(rotation);
+        else if (property == "scale") parser.read_array(scale);
+        else if (property == "translation") parser.read_array(translation);
+        else if (property == "weights") parser.read_array(weights);
+        else parser.warning();
+    }
+
+    void read_string(JSONParser& parser, const std::string_view& property) override
+    {
+        if (property=="name" && parser.read_string(name)) {}
+        else parser.warning();
+    }
+
+    void read_number(JSONParser& parser, const std::string_view& name, std::istream& input) override
+    {
+        if (name=="camera") input >> camera.value;
+        else if (name=="skin") input >> skin.value;
+        else if (name=="mesh") input >> mesh.value;
+        else parser.warning();
+    }
+};
+
+struct nodes_schema : public vsg2::JSONParser::Schema
+{
+    std::vector<node_schema> nodes;
+
+    void read_object(JSONParser& parser) override
+    {
+        vsg::info("nodes_schema::read_object()", this);
+
+        nodes.emplace_back();
+        parser.read_object(nodes.back());
+
+        vsg::info("done nodes_schema::read_object()", &nodes.back());
+        nodes.back().report();
+    }
+};
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -577,6 +668,7 @@ struct glTF_schema : public vsg2::JSONParser::Schema
     images_schema images;
     materials_schema materials;
     meshes_schema meshes;
+    nodes_schema nodes;
 
     void read_array(JSONParser& parser, const std::string_view& name) override;
     void read_object(JSONParser& parser, const std::string_view& name) override;
@@ -626,8 +718,7 @@ void glTF_schema::read_array(JSONParser& parser, const std::string_view& name)
     }
     else if (name == "nodes")
     {
-        vsg::info("nodes schema required (",name,") ");
-        // parser.read_array(*this);
+        parser.read_array(nodes);
     }
     else if (name == "samplers")
     {

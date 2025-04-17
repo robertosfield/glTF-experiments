@@ -26,6 +26,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/io/ReaderWriter.h>
 #include <vsg/io/mem_stream.h>
 
+#include <iostream>
+
 namespace vsg2
 {
 
@@ -70,6 +72,7 @@ namespace vsg2
         template<typename... Args>
         void warning(Args&&... args)
         {
+            std::cout<<std::endl;
             vsg::fatal("Parsing error at pos = ", pos, ". ", std::forward<Args>(args)...);
         }
     };
