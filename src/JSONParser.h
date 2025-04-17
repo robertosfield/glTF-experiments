@@ -29,28 +29,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace vsg2
 {
 
-    class JSONParser;
-
-    struct ObjectSchema
-    {
-        virtual void read_array(JSONParser& parser, const std::string_view& name);
-        virtual void read_object(JSONParser& parser, const std::string_view& name);
-        virtual void read_string(JSONParser& parser, const std::string_view& name);
-        virtual void read_number(JSONParser& parser, const std::string_view& name, std::istream& input);
-        virtual void read_bool(JSONParser& parser, const std::string_view& name, bool value);
-        virtual void read_null(JSONParser& parser, const std::string_view& name);
-    };
-
-    struct ArraySchema
-    {
-        virtual void read_array(JSONParser& parser);
-        virtual void read_object(JSONParser& parser);
-        virtual void read_string(JSONParser& parser);
-        virtual void read_number(JSONParser& parser, std::istream& input);
-        virtual void read_bool(JSONParser& parser, bool value);
-        virtual void read_null(JSONParser& parser);
-    };
-
     /// JSON parser based on spec: https://www.json.org/json-en.html
     struct JSONParser
     {
@@ -66,10 +44,28 @@ namespace vsg2
             return (c == ' ' || c == '\t' || c == '\r' || c == '\n');
         }
 
-        bool read_string(std::string& value);
+        struct Schema
+        {
+            // array elements [ value, value.. ]
+            virtual void read_array(JSONParser& parser);
+            virtual void read_object(JSONParser& parser);
+            virtual void read_string(JSONParser& parser);
+            virtual void read_number(JSONParser& parser, std::istream& input);
+            virtual void read_bool(JSONParser& parser, bool value);
+            virtual void read_null(JSONParser& parser);
 
-        void read_object(ObjectSchema& schema);
-        void read_array(ArraySchema& schema);
+            // object properties { name, value; ... }
+            virtual void read_array(JSONParser& parser, const std::string_view& name);
+            virtual void read_object(JSONParser& parser, const std::string_view& name);
+            virtual void read_string(JSONParser& parser, const std::string_view& name);
+            virtual void read_number(JSONParser& parser, const std::string_view& name, std::istream& input);
+            virtual void read_bool(JSONParser& parser, const std::string_view& name, bool value);
+            virtual void read_null(JSONParser& parser, const std::string_view& name);
+        };
+
+        bool read_string(std::string& value);
+        void read_object(Schema& schema);
+        void read_array(Schema& schema);
     };
 
 } // namespace vsg

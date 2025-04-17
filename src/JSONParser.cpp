@@ -24,60 +24,56 @@ using namespace vsg2;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-// ObjectSchema
+// JSONParser::Schema
 //
-void ObjectSchema::read_array(JSONParser& parser, const std::string_view& name)
+void JSONParser::Schema::read_array(JSONParser& parser)
 {
 }
 
-void ObjectSchema::read_object(JSONParser& parser, const std::string_view& name)
+void JSONParser::Schema::read_object(JSONParser& parser)
 {
 }
 
-void ObjectSchema::read_string(JSONParser& parser, const std::string_view& name)
+void JSONParser::Schema::read_string(JSONParser& parser)
 {
 }
 
-void ObjectSchema::read_number(JSONParser& parser, const std::string_view& name, std::istream& input)
+void JSONParser::Schema::read_number(JSONParser& parser, std::istream& input)
 {
 }
 
-void ObjectSchema::read_bool(JSONParser& parser, const std::string_view& name, bool value)
+void JSONParser::Schema::read_bool(JSONParser& parser, bool value)
 {
 }
 
-void ObjectSchema::read_null(JSONParser& parser, const std::string_view& name)
+void JSONParser::Schema::read_null(JSONParser& parser)
 {
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-// ArraySchema
-//
-void ArraySchema::read_array(JSONParser& parser)
+void JSONParser::Schema::read_array(JSONParser& parser, const std::string_view& name)
 {
 }
 
-void ArraySchema::read_object(JSONParser& parser)
+void JSONParser::Schema::read_object(JSONParser& parser, const std::string_view& name)
 {
 }
 
-void ArraySchema::read_string(JSONParser& parser)
+void JSONParser::Schema::read_string(JSONParser& parser, const std::string_view& name)
 {
 }
 
-void ArraySchema::read_number(JSONParser& parser, std::istream& input)
+void JSONParser::Schema::read_number(JSONParser& parser, const std::string_view& name, std::istream& input)
 {
 }
 
-void ArraySchema::read_bool(JSONParser& parser, bool value)
+void JSONParser::Schema::read_bool(JSONParser& parser, const std::string_view& name, bool value)
 {
 }
 
-void ArraySchema::read_null(JSONParser& parser)
+void JSONParser::Schema::read_null(JSONParser& parser, const std::string_view& name)
 {
-    vsg::warn("gltf parsing error, position = ", parser.pos);
 }
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -106,7 +102,7 @@ bool JSONParser::read_string(std::string& value)
 }
 
 
-void JSONParser::read_object(ObjectSchema& schema)
+void JSONParser::read_object(JSONParser::Schema& schema)
 {
     if (pos == std::string::npos) return;
     if (buffer[pos] != '{') return;
@@ -212,7 +208,7 @@ void JSONParser::read_object(ObjectSchema& schema)
     indent -= 4;
 }
 
-void JSONParser::read_array(ArraySchema& schema)
+void JSONParser::read_array(JSONParser::Schema& schema)
 {
     pos = buffer.find_first_not_of(" \t\r\n", pos);
     if (pos == std::string::npos) return;

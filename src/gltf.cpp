@@ -24,7 +24,7 @@ using namespace vsg2;
 using namespace vsgXchange;
 
 template<typename T>
-struct container_schema : public vsg2::ArraySchema
+struct container_schema : public vsg2::JSONParser::Schema
 {
     std::vector<T> values;
     void read_number(JSONParser& parser, std::istream& input) override
@@ -39,7 +39,7 @@ struct container_schema : public vsg2::ArraySchema
 //
 // accessor_schema
 //
-struct accessor_schema : public vsg2::ObjectSchema
+struct accessor_schema : public vsg2::JSONParser::Schema
 {
     uint32_t bufferView = 0;
     uint32_t byteOffset = 0;
@@ -99,7 +99,7 @@ struct accessor_schema : public vsg2::ObjectSchema
 
 };
 
-struct accessors_schema : public vsg2::ArraySchema
+struct accessors_schema : public vsg2::JSONParser::Schema
 {
     std::vector<accessor_schema> accessors;
 
@@ -119,7 +119,7 @@ struct accessors_schema : public vsg2::ArraySchema
 //
 // asset_schema
 //
-struct asset_scheme : public vsg2::ObjectSchema
+struct asset_scheme : public vsg2::JSONParser::Schema
 {
     std::string copyright;
     std::string version;
@@ -145,7 +145,7 @@ struct asset_scheme : public vsg2::ObjectSchema
 //
 // bufferViews_schema
 //
-struct bufferView_schema : public vsg2::ObjectSchema
+struct bufferView_schema : public vsg2::JSONParser::Schema
 {
     uint32_t buffer = 0;
     uint32_t byteOffset = 0;
@@ -179,7 +179,7 @@ struct bufferView_schema : public vsg2::ObjectSchema
     }
 };
 
-struct bufferViews_schema : public vsg2::ArraySchema
+struct bufferViews_schema : public vsg2::JSONParser::Schema
 {
     std::vector<bufferView_schema> bufferViews;
 
@@ -200,7 +200,7 @@ struct bufferViews_schema : public vsg2::ArraySchema
 //
 // buffers_schema
 //
-struct buffer_schema : public vsg2::ObjectSchema
+struct buffer_schema : public vsg2::JSONParser::Schema
 {
     std::string uri;
     uint32_t byteLength = 0;
@@ -231,7 +231,7 @@ struct buffer_schema : public vsg2::ObjectSchema
     }
 };
 
-struct buffers_schema : public vsg2::ArraySchema
+struct buffers_schema : public vsg2::JSONParser::Schema
 {
     std::vector<buffer_schema> buffers;
 
@@ -251,7 +251,7 @@ struct buffers_schema : public vsg2::ArraySchema
 //
 // images_schema
 //
-struct image_schema : public vsg2::ObjectSchema
+struct image_schema : public vsg2::JSONParser::Schema
 {
     std::string uri;
     std::string mimeType;
@@ -284,7 +284,7 @@ struct image_schema : public vsg2::ObjectSchema
     }
 };
 
-struct images_schema : public vsg2::ArraySchema
+struct images_schema : public vsg2::JSONParser::Schema
 {
     std::vector<image_schema> images;
 
@@ -305,7 +305,7 @@ struct images_schema : public vsg2::ArraySchema
 // materials_schema
 //
 
-struct textureInfo_schema : public vsg2::ObjectSchema
+struct textureInfo_schema : public vsg2::JSONParser::Schema
 {
     uint32_t index = 0;
     uint32_t texCoord = 0;
@@ -318,7 +318,7 @@ struct textureInfo_schema : public vsg2::ObjectSchema
     }
 };
 
-struct pbrMetallicRoughness_schema : public vsg2::ObjectSchema
+struct pbrMetallicRoughness_schema : public vsg2::JSONParser::Schema
 {
     container_schema<double> baseColorFactor; // default { 1.0, 1.0, 1.0, 1.0 }
     textureInfo_schema baseColorTexture;
@@ -369,7 +369,7 @@ struct occlusionTextureInfo_schema : public textureInfo_schema
     }
 };
 
-struct material_schema : public vsg2::ObjectSchema
+struct material_schema : public vsg2::JSONParser::Schema
 {
     std::string name;
     pbrMetallicRoughness_schema pbrMetallicRoughness;
@@ -434,7 +434,7 @@ struct material_schema : public vsg2::ObjectSchema
     }
 };
 
-struct materials_schema : public vsg2::ArraySchema
+struct materials_schema : public vsg2::JSONParser::Schema
 {
     std::vector<material_schema> materials;
 
@@ -454,7 +454,7 @@ struct materials_schema : public vsg2::ArraySchema
 //
 // meshes_schema
 //
-struct attributes_schema : public vsg2::ObjectSchema
+struct attributes_schema : public vsg2::JSONParser::Schema
 {
     std::map<std::string, uint32_t> values;
 
@@ -464,7 +464,7 @@ struct attributes_schema : public vsg2::ObjectSchema
     }
 };
 
-struct primitive_schema : public vsg2::ObjectSchema
+struct primitive_schema : public vsg2::JSONParser::Schema
 {
     attributes_schema attributes;
     uint32_t indices = 0;
@@ -496,7 +496,7 @@ struct primitive_schema : public vsg2::ObjectSchema
     }
 };
 
-struct primitives_schema : public vsg2::ArraySchema
+struct primitives_schema : public vsg2::JSONParser::Schema
 {
     std::vector<primitive_schema> primitives;
 
@@ -513,7 +513,7 @@ struct primitives_schema : public vsg2::ArraySchema
 };
 
 
-struct mesh_schema : public vsg2::ObjectSchema
+struct mesh_schema : public vsg2::JSONParser::Schema
 {
     std::string name;
     primitives_schema primitives;
@@ -545,7 +545,7 @@ struct mesh_schema : public vsg2::ObjectSchema
     }
 };
 
-struct meshes_schema : public vsg2::ArraySchema
+struct meshes_schema : public vsg2::JSONParser::Schema
 {
     std::vector<mesh_schema> meshes;
 
@@ -566,7 +566,7 @@ struct meshes_schema : public vsg2::ArraySchema
 //
 // glTF_schema
 //
-struct glTF_schema : public vsg2::ObjectSchema
+struct glTF_schema : public vsg2::JSONParser::Schema
 {
     accessors_schema accessors;
     asset_scheme asset;
