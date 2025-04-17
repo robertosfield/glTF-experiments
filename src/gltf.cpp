@@ -46,6 +46,20 @@ struct glTFid
     explicit operator bool() const noexcept { return valid(); }
 };
 
+/// output stream support for glTFid
+inline std::ostream& operator<<(std::ostream& output, const glTFid& id)
+{
+    output << "glTFid("<<id.value<<")";
+    return output;
+}
+
+/// input stream support for glTFid
+inline std::istream& operator>>(std::istream& input, glTFid& id)
+{
+    input >> id.value;
+    return input;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -53,7 +67,7 @@ struct glTFid
 //
 struct accessor_schema : public vsg2::JSONParser::Schema
 {
-    uint32_t bufferView = 0;
+    glTFid bufferView;
     uint32_t byteOffset = 0;
     uint32_t componentType = 0;
     bool normalized = false;
@@ -159,7 +173,7 @@ struct asset_scheme : public vsg2::JSONParser::Schema
 //
 struct bufferView_schema : public vsg2::JSONParser::Schema
 {
-    uint32_t buffer = 0;
+    glTFid buffer;
     uint32_t byteOffset = 0;
     uint32_t byteLength = 0;
     uint32_t byteStride = 4;
@@ -197,12 +211,12 @@ struct bufferViews_schema : public vsg2::JSONParser::Schema
 
     void read_object(JSONParser& parser) override
     {
-        vsg::info("accessors_schema::read_object()", this);
+        vsg::info("bufferViews_schema::read_object()", this);
 
         bufferViews.emplace_back();
         parser.read_object(bufferViews.back());
 
-        vsg::info("done accessors_schema::read_object()", &bufferViews.back());
+        vsg::info("done bufferViews_schema::read_object()", &bufferViews.back());
         bufferViews.back().report();
     }
 };
@@ -267,7 +281,7 @@ struct image_schema : public vsg2::JSONParser::Schema
 {
     std::string uri;
     std::string mimeType;
-    uint32_t bufferView = 0;
+    glTFid bufferView;
 
     // name
     // extensions
@@ -319,7 +333,7 @@ struct images_schema : public vsg2::JSONParser::Schema
 
 struct textureInfo_schema : public vsg2::JSONParser::Schema
 {
-    uint32_t index = 0;
+    glTFid index;
     uint32_t texCoord = 0;
 
     void read_number(JSONParser& parser, const std::string_view& property, std::istream& input) override
@@ -479,8 +493,8 @@ struct attributes_schema : public vsg2::JSONParser::Schema
 struct primitive_schema : public vsg2::JSONParser::Schema
 {
     attributes_schema attributes;
-    uint32_t indices = 0;
-    uint32_t material = 0;
+    glTFid indices;
+    glTFid material;
     uint32_t mode = 0;
 
     void read_object(JSONParser& parser, const std::string_view& property) override
@@ -600,9 +614,9 @@ struct node_schema : public vsg2::JSONParser::Schema
     {
         vsg::info("node_schema { ");
         vsg::info("    name: ", name);
-        if (camera) vsg::info("    camera: ", camera.value);
-        if (skin) vsg::info("    skin: ", skin.value);
-        if (mesh) vsg::info("    mesh: ", mesh.value);
+        if (camera) vsg::info("    camera: ", camera);
+        if (skin) vsg::info("    skin: ", skin);
+        if (mesh) vsg::info("    mesh: ", mesh);
         vsg::info("    children: ", children.values.size());
         vsg::info("    matrix: ", matrix.values.size());
         vsg::info("    rotation: ", rotation.values.size());
@@ -631,9 +645,9 @@ struct node_schema : public vsg2::JSONParser::Schema
 
     void read_number(JSONParser& parser, const std::string_view& name, std::istream& input) override
     {
-        if (name=="camera") input >> camera.value;
-        else if (name=="skin") input >> skin.value;
-        else if (name=="mesh") input >> mesh.value;
+        if (name=="camera") input >> camera;
+        else if (name=="skin") input >> skin;
+        else if (name=="mesh") input >> mesh;
         else parser.warning();
     }
 };
