@@ -24,7 +24,7 @@ using namespace vsg2;
 using namespace vsgXchange;
 
 template<typename T>
-struct container_schema : public vsg2::JSONParser::Schema
+struct values_schema : public vsg2::JSONParser::Schema
 {
     std::vector<T> values;
     void read_number(JSONParser& parser, std::istream& input) override
@@ -32,6 +32,23 @@ struct container_schema : public vsg2::JSONParser::Schema
         T value;
         input >> value;
         values.push_back(value);
+    }
+};
+
+template<typename T>
+struct objects_schema : public vsg2::JSONParser::Schema
+{
+    std::vector<T> values;
+
+    void read_object(JSONParser& parser) override
+    {
+        values.emplace_back();
+        parser.read_object(values.back());
+    }
+
+    void report()
+    {
+        for(auto& value : values) value.report();
     }
 };
 
@@ -73,8 +90,8 @@ struct accessor_schema : public vsg2::JSONParser::Schema
     bool normalized = false;
     uint32_t count = 0;
     std::string type;
-    container_schema<double> max;
-    container_schema<double> min;
+    values_schema<double> max;
+    values_schema<double> min;
 
     // sparse
     // name
@@ -125,22 +142,6 @@ struct accessor_schema : public vsg2::JSONParser::Schema
 
 };
 
-struct accessors_schema : public vsg2::JSONParser::Schema
-{
-    std::vector<accessor_schema> accessors;
-
-    void read_object(JSONParser& parser) override
-    {
-        vsg::info("accessors_schema::read_object()", this);
-
-        accessors.emplace_back();
-        parser.read_object(accessors.back());
-
-        vsg::info("done accessors_schema::read_object()", &accessors.back());
-        accessors.back().report();
-    }
-};
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // asset_schema
@@ -169,7 +170,7 @@ struct asset_scheme : public vsg2::JSONParser::Schema
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-// bufferViews_schema
+// bufferView_schema
 //
 struct bufferView_schema : public vsg2::JSONParser::Schema
 {
@@ -205,26 +206,10 @@ struct bufferView_schema : public vsg2::JSONParser::Schema
     }
 };
 
-struct bufferViews_schema : public vsg2::JSONParser::Schema
-{
-    std::vector<bufferView_schema> bufferViews;
-
-    void read_object(JSONParser& parser) override
-    {
-        vsg::info("bufferViews_schema::read_object()", this);
-
-        bufferViews.emplace_back();
-        parser.read_object(bufferViews.back());
-
-        vsg::info("done bufferViews_schema::read_object()", &bufferViews.back());
-        bufferViews.back().report();
-    }
-};
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-// buffers_schema
+// buffer_schema
 //
 struct buffer_schema : public vsg2::JSONParser::Schema
 {
@@ -243,7 +228,6 @@ struct buffer_schema : public vsg2::JSONParser::Schema
         vsg::info("} ");
     }
 
-
     void read_string(JSONParser& parser, const std::string_view& name) override
     {
         if (name=="uri" && parser.read_string(uri)) {}
@@ -257,25 +241,9 @@ struct buffer_schema : public vsg2::JSONParser::Schema
     }
 };
 
-struct buffers_schema : public vsg2::JSONParser::Schema
-{
-    std::vector<buffer_schema> buffers;
-
-    void read_object(JSONParser& parser) override
-    {
-        vsg::info("buffers_schema::read_object()", this);
-
-        buffers.emplace_back();
-        parser.read_object(buffers.back());
-
-        vsg::info("done buffers_schema::read_object()", &buffers.back());
-        buffers.back().report();
-    }
-};
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-// images_schema
+// image_schema
 //
 struct image_schema : public vsg2::JSONParser::Schema
 {
@@ -310,25 +278,9 @@ struct image_schema : public vsg2::JSONParser::Schema
     }
 };
 
-struct images_schema : public vsg2::JSONParser::Schema
-{
-    std::vector<image_schema> images;
-
-    void read_object(JSONParser& parser) override
-    {
-        vsg::info("images_schema::read_object()", this);
-
-        images.emplace_back();
-        parser.read_object(images.back());
-
-        vsg::info("done images_schema::read_object()", &images.back());
-        images.back().report();
-    }
-};
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-// materials_schema
+// material_schema
 //
 
 struct textureInfo_schema : public vsg2::JSONParser::Schema
@@ -346,7 +298,7 @@ struct textureInfo_schema : public vsg2::JSONParser::Schema
 
 struct pbrMetallicRoughness_schema : public vsg2::JSONParser::Schema
 {
-    container_schema<double> baseColorFactor; // default { 1.0, 1.0, 1.0, 1.0 }
+    values_schema<double> baseColorFactor; // default { 1.0, 1.0, 1.0, 1.0 }
     textureInfo_schema baseColorTexture;
     double metallicFactor = 1.0;
     double roughnessFactor = 1.0;
@@ -402,7 +354,7 @@ struct material_schema : public vsg2::JSONParser::Schema
     normalTextureInfo_schema normalTexture;
     occlusionTextureInfo_schema occlusionTexture;
     textureInfo_schema emissiveTexture;
-    container_schema<double> emissiveFactor; // default { 0.0, 0.0, 0.0 }
+    values_schema<double> emissiveFactor; // default { 0.0, 0.0, 0.0 }
     std::string alphaMode = "OPAQUE";
     double alphaCutoff = 0.5;
     bool doubleSided = false;
@@ -460,25 +412,9 @@ struct material_schema : public vsg2::JSONParser::Schema
     }
 };
 
-struct materials_schema : public vsg2::JSONParser::Schema
-{
-    std::vector<material_schema> materials;
-
-    void read_object(JSONParser& parser) override
-    {
-        vsg::info("materials_schema::read_object()", this);
-
-        materials.emplace_back();
-        parser.read_object(materials.back());
-
-        vsg::info("done materials_schema::read_object()", &materials.back());
-        materials.back().report();
-    }
-};
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-// meshes_schema
+// mesh_schema
 //
 struct attributes_schema : public vsg2::JSONParser::Schema
 {
@@ -524,28 +460,11 @@ struct primitive_schema : public vsg2::JSONParser::Schema
     }
 };
 
-struct primitives_schema : public vsg2::JSONParser::Schema
-{
-    std::vector<primitive_schema> primitives;
-
-    void read_object(JSONParser& parser) override
-    {
-        vsg::info("primitives_schema::read_object()", this);
-
-        primitives.emplace_back();
-        parser.read_object(primitives.back());
-
-        vsg::info("done primitives_schema::read_object()", &primitives.back());
-        primitives.back().report();
-    }
-};
-
-
 struct mesh_schema : public vsg2::JSONParser::Schema
 {
     std::string name;
-    primitives_schema primitives;
-    container_schema<double> weights;
+    objects_schema<primitive_schema> primitives;
+    values_schema<double> weights;
 
     // extensions
     // extras
@@ -554,7 +473,7 @@ struct mesh_schema : public vsg2::JSONParser::Schema
     {
         vsg::info("mesh_schema { ");
         vsg::info("    name: ", name);
-        vsg::info("    primitives: ", primitives.primitives.size());
+        vsg::info("    primitives: ", primitives.values.size());
         vsg::info("    weights: ", weights.values.size());
         vsg::info("} ");
     }
@@ -573,25 +492,9 @@ struct mesh_schema : public vsg2::JSONParser::Schema
     }
 };
 
-struct meshes_schema : public vsg2::JSONParser::Schema
-{
-    std::vector<mesh_schema> meshes;
-
-    void read_object(JSONParser& parser) override
-    {
-        vsg::info("meshes_schema::read_object()", this);
-
-        meshes.emplace_back();
-        parser.read_object(meshes.back());
-
-        vsg::info("done meshes_schema::read_object()", &meshes.back());
-        meshes.back().report();
-    }
-};
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-// nodes_schema
+// node_schema
 //
 struct node_schema : public vsg2::JSONParser::Schema
 {
@@ -600,12 +503,12 @@ struct node_schema : public vsg2::JSONParser::Schema
     glTFid camera;
     glTFid skin;
     glTFid mesh;
-    container_schema<uint32_t> children;
-    container_schema<double> matrix;
-    container_schema<double> rotation;
-    container_schema<double> scale;
-    container_schema<double> translation;
-    container_schema<double> weights;
+    values_schema<uint32_t> children;
+    values_schema<double> matrix;
+    values_schema<double> rotation;
+    values_schema<double> scale;
+    values_schema<double> translation;
+    values_schema<double> weights;
 
     // extensions
     // extras
@@ -652,22 +555,6 @@ struct node_schema : public vsg2::JSONParser::Schema
     }
 };
 
-struct nodes_schema : public vsg2::JSONParser::Schema
-{
-    std::vector<node_schema> nodes;
-
-    void read_object(JSONParser& parser) override
-    {
-        vsg::info("nodes_schema::read_object()", this);
-
-        nodes.emplace_back();
-        parser.read_object(nodes.back());
-
-        vsg::info("done nodes_schema::read_object()", &nodes.back());
-        nodes.back().report();
-    }
-};
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // sampler_schema
@@ -710,41 +597,37 @@ struct sampler_schema : public vsg2::JSONParser::Schema
     }
 };
 
-struct sampers_schema : public vsg2::JSONParser::Schema
-{
-    std::vector<sampler_schema> nodes;
-
-    void read_object(JSONParser& parser) override
-    {
-        vsg::info("sampers_schema::read_object()", this);
-
-        nodes.emplace_back();
-        parser.read_object(nodes.back());
-
-        vsg::info("done sampers_schema::read_object()", &nodes.back());
-        nodes.back().report();
-    }
-};
-
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // glTF_schema
 //
 struct glTF_schema : public vsg2::JSONParser::Schema
 {
-    accessors_schema accessors;
     asset_scheme asset;
-    bufferViews_schema bufferViews;
-    buffers_schema buffers;
-    images_schema images;
-    materials_schema materials;
-    meshes_schema meshes;
-    nodes_schema nodes;
-    sampers_schema samplers;
+    objects_schema<accessor_schema> accessors;
+    objects_schema<bufferView_schema> bufferViews;
+    objects_schema<buffer_schema> buffers;
+    objects_schema<image_schema> images;
+    objects_schema<material_schema> materials;
+    objects_schema<mesh_schema> meshes;
+    objects_schema<node_schema> nodes;
+    objects_schema<sampler_schema> samplers;
 
     void read_array(JSONParser& parser, const std::string_view& name) override;
     void read_object(JSONParser& parser, const std::string_view& name) override;
+
+    void report()
+    {
+        asset.report();
+        accessors.report();
+        bufferViews.report();
+        buffers.report();
+        images.report();
+        materials.report();
+        meshes.report();
+        nodes.report();
+        samplers.report();
+    }
 };
 
 void glTF_schema::read_array(JSONParser& parser, const std::string_view& name)
@@ -868,6 +751,7 @@ vsg::ref_ptr<vsg::Object> gltf::_read(std::istream& fin, vsg::ref_ptr<const vsg:
     if (parser.buffer[parser.pos]=='{')
     {
         parser.read_object(schema);
+        schema.report();
     }
     else
     {

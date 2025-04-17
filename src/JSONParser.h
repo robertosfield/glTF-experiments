@@ -73,7 +73,7 @@ namespace vsg2
         void warning(Args&&... args)
         {
             std::cout<<std::endl;
-            vsg::fatal("Parsing error at pos = ", pos, ". ", std::forward<Args>(args)...);
+            vsg::warn("Parsing error at pos = ", pos, ". ", std::forward<Args>(args)...);
         }
     };
 
