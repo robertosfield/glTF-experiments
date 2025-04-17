@@ -66,6 +66,12 @@ namespace vsg2
         bool read_string(std::string& value);
         void read_object(Schema& schema);
         void read_array(Schema& schema);
+
+        template<typename... Args>
+        void warning(Args&&... args)
+        {
+            vsg::fatal("Parsing error at pos = ", pos, ". ", std::forward<Args>(args)...);
+        }
     };
 
 } // namespace vsg

@@ -74,7 +74,6 @@ void JSONParser::Schema::read_null(JSONParser& parser, const std::string_view& n
 {
 }
 
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // json parser
@@ -116,6 +115,8 @@ void JSONParser::read_object(JSONParser::Schema& schema)
 
     while (pos != std::string::npos && pos < buffer.size() && buffer[pos] != '}')
     {
+        auto previous_position = pos;
+
         if (buffer[pos] == '"')
         {
             auto end_of_string = buffer.find('"', pos + 1);
@@ -198,6 +199,12 @@ void JSONParser::read_object(JSONParser::Schema& schema)
         }
 
         pos = buffer.find_first_not_of(" \t\r\n", pos);
+
+        if (pos <= previous_position)
+        {
+            warning("Parser stuck when reading object.");
+            break;
+        }
     }
 
     if (pos < buffer.size() && buffer[pos] == '}')
@@ -231,6 +238,8 @@ void JSONParser::read_array(JSONParser::Schema& schema)
 
     while (pos != std::string::npos && pos < buffer.size() && buffer[pos] != ']')
     {
+        auto previous_position = pos;
+
         // now look to pair with value after " : "
         if (buffer[pos] == '{')
         {
@@ -283,6 +292,12 @@ void JSONParser::read_array(JSONParser::Schema& schema)
         }
 
         pos = buffer.find_first_not_of(" \t\r\n", pos);
+
+        if (pos <= previous_position)
+        {
+            warning("Parser stuck when reading array.");
+            break;
+        }
     }
 
     if (pos < buffer.size() && buffer[pos] == ']')
