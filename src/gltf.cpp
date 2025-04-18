@@ -662,6 +662,8 @@ struct texture_schema : public vsg::JSONParser::Schema
 //
 struct glTF_schema : public vsg::JSONParser::Schema
 {
+    values_schema<std::string> extensionsUsed;
+    values_schema<std::string> extensionsRequired;
     asset_scheme asset;
     objects_schema<accessor_schema> accessors;
     objects_schema<bufferView_schema> bufferViews;
@@ -698,14 +700,8 @@ struct glTF_schema : public vsg::JSONParser::Schema
 
 void glTF_schema::read_array(vsg::JSONParser& parser, const std::string_view& property)
 {
-    if (property == "extensionsUsed")
-    {
-        vsg::info("extensionsUsed schema required (",property,") ");
-    }
-    else if (property == "extensionsRequired")
-    {
-        vsg::info("extensionsRequired schema required (",property,") ");
-    }
+    if (property == "extensionsUsed") parser.read_array(extensionsUsed);
+    else if (property == "extensionsRequired") parser.read_array(extensionsRequired);
     else if (property == "accessors") parser.read_array(accessors);
     else if (property == "animations")
     {
