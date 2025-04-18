@@ -249,6 +249,8 @@ struct bufferView_schema : public vsg::JSONParser::Schema
 //
 struct buffer_schema : public vsg::JSONParser::Schema
 {
+    std::string name;
+    vsg::JSONtoMetaDataSchema extras;
     std::string uri;
     uint32_t byteLength = 0;
 
@@ -259,6 +261,8 @@ struct buffer_schema : public vsg::JSONParser::Schema
     void report()
     {
         vsg::info("buffer_schema { ");
+        vsg::info("    name = ", name);
+        vsg::info("    extras.object = ", extras.object, ", extras.objects = ", extras.objects);
         vsg::info("    uri: ", uri);
         vsg::info("    byteLength: ", byteLength);
         vsg::info("} ");
@@ -266,13 +270,20 @@ struct buffer_schema : public vsg::JSONParser::Schema
 
     void read_string(vsg::JSONParser& parser, const std::string_view& property) override
     {
-        if (property=="uri" && parser.read_string(uri)) {}
+        if (property=="name") parser.read_string(name);
+        else if (property=="uri" && parser.read_string(uri)) {}
         else parser.warning();
     }
 
     void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override
     {
         if (property=="byteLength") input >> byteLength;
+        else parser.warning();
+    }
+
+    void read_object(vsg::JSONParser& parser, const std::string_view& property) override
+    {
+        if (property=="extras") parser.read_object(extras);
         else parser.warning();
     }
 };
