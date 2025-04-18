@@ -820,6 +820,8 @@ vsg::ref_ptr<vsg::Object> gltf::_read(std::istream& fin, vsg::ref_ptr<const vsg:
     if (fileSize==0) return {};
 
     vsg::JSONParser parser;
+    //parser.level = vsg::Logger::LOGGER_FATAL;
+    //parser.level = vsg::Logger::LOGGER_DEBUG;
 
     glTF_schema schema;
 
