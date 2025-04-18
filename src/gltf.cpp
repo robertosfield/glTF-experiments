@@ -17,6 +17,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <vsg/io/Path.h>
 #include <vsg/io/json.h>
 #include <vsg/io/mem_stream.h>
+#include <vsg/io/write.h>
 
 #include <fstream>
 
@@ -84,6 +85,7 @@ inline std::istream& operator>>(std::istream& input, glTFid& id)
 struct accessor_schema : public vsg::JSONParser::Schema
 {
     std::string name;
+    vsg::JSONtoMetaDataSchema extras;
     glTFid bufferView;
     uint32_t byteOffset = 0;
     uint32_t componentType = 0;
@@ -100,6 +102,8 @@ struct accessor_schema : public vsg::JSONParser::Schema
     void report()
     {
         vsg::info("accessor_schema { ");
+        vsg::info("    name = ", name);
+        vsg::info("    extras.object = ", extras.object, ", extras.objects = ", extras.objects);
         vsg::info("    bufferView: ", bufferView);
         vsg::info("    byteOffset: ", byteOffset);
         vsg::info("    componentType: ", componentType);
@@ -140,6 +144,12 @@ struct accessor_schema : public vsg::JSONParser::Schema
         else parser.warning();
     }
 
+    void read_object(vsg::JSONParser& parser, const std::string_view& property) override
+    {
+        if (property=="extras") parser.read_object(extras);
+        else parser.warning();
+    }
+
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -148,6 +158,7 @@ struct accessor_schema : public vsg::JSONParser::Schema
 //
 struct asset_scheme : public vsg::JSONParser::Schema
 {
+    vsg::JSONtoMetaDataSchema extras;
     std::string copyright;
     std::string version;
     std::string generator;
@@ -155,7 +166,10 @@ struct asset_scheme : public vsg::JSONParser::Schema
 
     void report()
     {
-        vsg::info("asset_scheme = { copyright = ", copyright, ", generator = ", generator, ", version = ", version, ", minVersion = ", minVersion, " } ", this);
+        vsg::info("asset_scheme = {");
+        vsg::info("    extras.object = ", extras.object, ", extras.objects = ", extras.objects);
+        vsg::info("    copyright = ", copyright, ", generator = ", generator, ", version = ", version, ", minVersion = ", minVersion, " } ", this);
+        vsg::info(" } ", this);
     }
 
     void read_string(vsg::JSONParser& parser, const std::string_view& property) override
@@ -166,6 +180,12 @@ struct asset_scheme : public vsg::JSONParser::Schema
         else if (property=="minVersion") { parser.read_string(minVersion); }
         else parser.warning();
     }
+
+    void read_object(vsg::JSONParser& parser, const std::string_view& property) override
+    {
+        if (property=="extras") parser.read_object(extras);
+        else parser.warning();
+    }
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -174,6 +194,8 @@ struct asset_scheme : public vsg::JSONParser::Schema
 //
 struct bufferView_schema : public vsg::JSONParser::Schema
 {
+    std::string name;
+    vsg::JSONtoMetaDataSchema extras;
     glTFid buffer;
     uint32_t byteOffset = 0;
     uint32_t byteLength = 0;
@@ -187,12 +209,20 @@ struct bufferView_schema : public vsg::JSONParser::Schema
     void report()
     {
         vsg::info("bufferView_schema { ");
+        vsg::info("    name = ", name);
+        vsg::info("    extras.object = ", extras.object, ", extras.objects = ", extras.objects);
         vsg::info("    buffer: ", buffer);
         vsg::info("    byteOffset: ", byteOffset);
         vsg::info("    byteLength: ", byteLength);
         vsg::info("    byteStride: ", byteStride);
         vsg::info("    target: ", target);
         vsg::info("} ");
+    }
+
+    void read_string(vsg::JSONParser& parser, const std::string_view& property) override
+    {
+        if (property=="name") parser.read_string(name);
+        else parser.warning();
     }
 
     void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override
@@ -202,6 +232,12 @@ struct bufferView_schema : public vsg::JSONParser::Schema
         else if (property=="byteLength") input >> byteLength;
         else if (property=="byteStride") input >> byteStride;
         else if (property=="target") input >> target;
+        else parser.warning();
+    }
+
+    void read_object(vsg::JSONParser& parser, const std::string_view& property) override
+    {
+        if (property=="extras") parser.read_object(extras);
         else parser.warning();
     }
 };
@@ -463,6 +499,7 @@ struct primitive_schema : public vsg::JSONParser::Schema
 struct mesh_schema : public vsg::JSONParser::Schema
 {
     std::string name;
+    vsg::JSONtoMetaDataSchema extras;
     objects_schema<primitive_schema> primitives;
     values_schema<double> weights;
 
@@ -472,7 +509,8 @@ struct mesh_schema : public vsg::JSONParser::Schema
     void report()
     {
         vsg::info("mesh_schema { ");
-        vsg::info("    name: ", name);
+        vsg::info("    name = ", name);
+        vsg::info("    extras.object = ", extras.object, ", extras.objects = ", extras.objects);
         vsg::info("    primitives: ", primitives.values.size());
         vsg::info("    weights: ", weights.values.size());
         vsg::info("} ");
@@ -488,6 +526,12 @@ struct mesh_schema : public vsg::JSONParser::Schema
     void read_string(vsg::JSONParser& parser, const std::string_view& property) override
     {
         if (property=="name") parser.read_string(name);
+        else parser.warning();
+    }
+
+    void read_object(vsg::JSONParser& parser, const std::string_view& property) override
+    {
+        if (property=="extras") parser.read_object(extras);
         else parser.warning();
     }
 };
@@ -729,7 +773,12 @@ void glTF_schema::read_array(vsg::JSONParser& parser, const std::string_view& pr
 
 void glTF_schema::read_object(vsg::JSONParser& parser, const std::string_view& property)
 {
-    if (property == "asset") parser.read_object(asset);
+    if (property == "asset")
+    {
+        parser.read_object(asset);
+        asset.report();
+        vsg::write(asset.extras.object, "extras.vsgt");
+    }
     else parser.warning();
 }
 
