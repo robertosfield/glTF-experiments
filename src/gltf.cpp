@@ -15,42 +15,13 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include "gltf.h"
 
 #include <vsg/io/Path.h>
-#include <vsg/io/json.h>
+#include <vsg/io/JSONParser.h>
 #include <vsg/io/mem_stream.h>
 #include <vsg/io/write.h>
 
 #include <fstream>
 
 using namespace vsgXchange;
-
-template<typename T>
-struct values_schema : public vsg::JSONParser::Schema
-{
-    std::vector<T> values;
-    void read_number(vsg::JSONParser& parser, std::istream& input) override
-    {
-        T value;
-        input >> value;
-        values.push_back(value);
-    }
-};
-
-template<typename T>
-struct objects_schema : public vsg::JSONParser::Schema
-{
-    std::vector<T> values;
-
-    void read_object(vsg::JSONParser& parser) override
-    {
-        values.emplace_back();
-        parser.read_object(values.back());
-    }
-
-    void report()
-    {
-        for(auto& value : values) value.report();
-    }
-};
 
 struct glTFid
 {
@@ -92,8 +63,8 @@ struct accessor_schema : public vsg::JSONParser::Schema
     bool normalized = false;
     uint32_t count = 0;
     std::string type;
-    values_schema<double> max;
-    values_schema<double> min;
+    vsg::ValuesSchema<double> max;
+    vsg::ValuesSchema<double> min;
 
     // sparse
     // extensions
@@ -356,7 +327,7 @@ struct textureInfo_schema : public vsg::JSONParser::Schema
 
 struct pbrMetallicRoughness_schema : public vsg::JSONParser::Schema
 {
-    values_schema<double> baseColorFactor; // default { 1.0, 1.0, 1.0, 1.0 }
+    vsg::ValuesSchema<double> baseColorFactor; // default { 1.0, 1.0, 1.0, 1.0 }
     textureInfo_schema baseColorTexture;
     double metallicFactor = 1.0;
     double roughnessFactor = 1.0;
@@ -412,7 +383,7 @@ struct material_schema : public vsg::JSONParser::Schema
     normalTextureInfo_schema normalTexture;
     occlusionTextureInfo_schema occlusionTexture;
     textureInfo_schema emissiveTexture;
-    values_schema<double> emissiveFactor; // default { 0.0, 0.0, 0.0 }
+    vsg::ValuesSchema<double> emissiveFactor; // default { 0.0, 0.0, 0.0 }
     std::string alphaMode = "OPAQUE";
     double alphaCutoff = 0.5;
     bool doubleSided = false;
@@ -498,7 +469,7 @@ struct primitive_schema : public vsg::JSONParser::Schema
     glTFid indices;
     glTFid material;
     uint32_t mode = 0;
-    objects_schema<attributes_schema> targets;
+    vsg::ObjectsSchema<attributes_schema> targets;
 
     void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override
     {
@@ -546,8 +517,8 @@ struct mesh_schema : public vsg::JSONParser::Schema
 {
     std::string name;
     vsg::JSONtoMetaDataSchema extras;
-    objects_schema<primitive_schema> primitives;
-    values_schema<double> weights;
+    vsg::ObjectsSchema<primitive_schema> primitives;
+    vsg::ValuesSchema<double> weights;
 
     // extensions
     // extras
@@ -593,12 +564,12 @@ struct node_schema : public vsg::JSONParser::Schema
     glTFid camera;
     glTFid skin;
     glTFid mesh;
-    values_schema<uint32_t> children;
-    values_schema<double> matrix;
-    values_schema<double> rotation;
-    values_schema<double> scale;
-    values_schema<double> translation;
-    values_schema<double> weights;
+    vsg::ValuesSchema<uint32_t> children;
+    vsg::ValuesSchema<double> matrix;
+    vsg::ValuesSchema<double> rotation;
+    vsg::ValuesSchema<double> scale;
+    vsg::ValuesSchema<double> translation;
+    vsg::ValuesSchema<double> weights;
 
     // extensions
     // extras
@@ -695,7 +666,7 @@ struct sampler_schema : public vsg::JSONParser::Schema
 struct scene_schema : public vsg::JSONParser::Schema
 {
     std::string name;
-    values_schema<glTFid> nodes;
+    vsg::ValuesSchema<glTFid> nodes;
 
     void report()
     {
@@ -752,20 +723,20 @@ struct texture_schema : public vsg::JSONParser::Schema
 //
 struct glTF_schema : public vsg::JSONParser::Schema
 {
-    values_schema<std::string> extensionsUsed;
-    values_schema<std::string> extensionsRequired;
+    vsg::ValuesSchema<std::string> extensionsUsed;
+    vsg::ValuesSchema<std::string> extensionsRequired;
     asset_scheme asset;
-    objects_schema<accessor_schema> accessors;
-    objects_schema<bufferView_schema> bufferViews;
-    objects_schema<buffer_schema> buffers;
-    objects_schema<image_schema> images;
-    objects_schema<material_schema> materials;
-    objects_schema<mesh_schema> meshes;
-    objects_schema<node_schema> nodes;
-    objects_schema<sampler_schema> samplers;
+    vsg::ObjectsSchema<accessor_schema> accessors;
+    vsg::ObjectsSchema<bufferView_schema> bufferViews;
+    vsg::ObjectsSchema<buffer_schema> buffers;
+    vsg::ObjectsSchema<image_schema> images;
+    vsg::ObjectsSchema<material_schema> materials;
+    vsg::ObjectsSchema<mesh_schema> meshes;
+    vsg::ObjectsSchema<node_schema> nodes;
+    vsg::ObjectsSchema<sampler_schema> samplers;
     glTFid scene;
-    objects_schema<scene_schema> scenes;
-    objects_schema<texture_schema> textures;
+    vsg::ObjectsSchema<scene_schema> scenes;
+    vsg::ObjectsSchema<texture_schema> textures;
 
     void read_array(vsg::JSONParser& parser, const std::string_view& property) override;
     void read_object(vsg::JSONParser& parser, const std::string_view& property) override;
