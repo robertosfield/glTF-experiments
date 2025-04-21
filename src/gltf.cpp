@@ -23,11 +23,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 using namespace vsgXchange;
 
 
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // accessor_schema
 //
-void accessor_schema::report()
+void gltf::accessor_schema::report()
 {
     vsg::info("accessor_schema { ");
     vsg::info("    name = ", name);
@@ -43,21 +44,21 @@ void accessor_schema::report()
     vsg::info("} ");
 }
 
-void accessor_schema::read_array(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::accessor_schema::read_array(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property == "max") parser.read_array(max);
     else if (property == "min") parser.read_array(max);
     else parser.warning();
 }
 
-void accessor_schema::read_string(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::accessor_schema::read_string(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property=="name") parser.read_string(name);
     else if (property=="type") parser.read_string(type);
     else parser.warning();
 }
 
-void accessor_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+void gltf::accessor_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
 {
     if (property=="bufferView") input >> bufferView;
     else if (property=="byteOffset") input >> byteOffset;
@@ -66,13 +67,13 @@ void accessor_schema::read_number(vsg::JSONParser& parser, const std::string_vie
     else parser.warning();
 }
 
-void accessor_schema::read_bool(vsg::JSONParser& parser, const std::string_view& property, bool value)
+void gltf::accessor_schema::read_bool(vsg::JSONParser& parser, const std::string_view& property, bool value)
 {
     if (property=="normalized") normalized = value;
     else parser.warning();
 }
 
-void accessor_schema::read_object(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::accessor_schema::read_object(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property=="extras") parser.read_object(extras);
     else parser.warning();
@@ -82,7 +83,7 @@ void accessor_schema::read_object(vsg::JSONParser& parser, const std::string_vie
 //
 // asset_schema
 //
-void asset_scheme::report()
+void gltf::asset_scheme::report()
 {
     vsg::info("asset_scheme = {");
     vsg::info("    extras.object = ", extras.object, ", extras.objects = ", extras.objects);
@@ -90,7 +91,7 @@ void asset_scheme::report()
     vsg::info(" } ", this);
 }
 
-void asset_scheme::read_string(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::asset_scheme::read_string(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property=="copyright") { parser.read_string(copyright); }
     else if (property=="generator") { parser.read_string(generator); }
@@ -99,7 +100,7 @@ void asset_scheme::read_string(vsg::JSONParser& parser, const std::string_view& 
     else parser.warning();
 }
 
-void asset_scheme::read_object(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::asset_scheme::read_object(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property=="extras") parser.read_object(extras);
     else parser.warning();
@@ -109,7 +110,7 @@ void asset_scheme::read_object(vsg::JSONParser& parser, const std::string_view& 
 //
 // bufferView_schema
 //
-void bufferView_schema::report()
+void gltf::bufferView_schema::report()
 {
     vsg::info("bufferView_schema { ");
     vsg::info("    name = ", name);
@@ -122,13 +123,13 @@ void bufferView_schema::report()
     vsg::info("} ");
 }
 
-void bufferView_schema::read_string(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::bufferView_schema::read_string(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property=="name") parser.read_string(name);
     else parser.warning();
 }
 
-void bufferView_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+void gltf::bufferView_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
 {
     if (property=="buffer") input >> buffer;
     else if (property=="byteOffset") input >> byteOffset;
@@ -138,7 +139,7 @@ void bufferView_schema::read_number(vsg::JSONParser& parser, const std::string_v
     else parser.warning();
 }
 
-void bufferView_schema::read_object(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::bufferView_schema::read_object(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property=="extras") parser.read_object(extras);
     else parser.warning();
@@ -149,7 +150,7 @@ void bufferView_schema::read_object(vsg::JSONParser& parser, const std::string_v
 //
 // buffer_schema
 //
-void buffer_schema::report()
+void gltf::buffer_schema::report()
 {
     vsg::info("buffer_schema { ");
     vsg::info("    name = ", name);
@@ -159,20 +160,20 @@ void buffer_schema::report()
     vsg::info("} ");
 }
 
-void buffer_schema::read_string(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::buffer_schema::read_string(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property=="name") parser.read_string(name);
     else if (property=="uri" && parser.read_string(uri)) {}
     else parser.warning();
 }
 
-void buffer_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+void gltf::buffer_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
 {
     if (property=="byteLength") input >> byteLength;
     else parser.warning();
 }
 
-void buffer_schema::read_object(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::buffer_schema::read_object(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property=="extras") parser.read_object(extras);
     else parser.warning();
@@ -182,7 +183,7 @@ void buffer_schema::read_object(vsg::JSONParser& parser, const std::string_view&
 //
 // image_schema
 //
-void image_schema::report()
+void gltf::image_schema::report()
 {
     vsg::info("image_schema { ");
     vsg::info("    name = ", name);
@@ -193,7 +194,7 @@ void image_schema::report()
     vsg::info("} ");
 }
 
-void image_schema::read_string(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::image_schema::read_string(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property=="name") parser.read_string(name);
     else if (property=="uri" && parser.read_string(uri)) {}
@@ -201,13 +202,13 @@ void image_schema::read_string(vsg::JSONParser& parser, const std::string_view& 
     else parser.warning();
 }
 
-void image_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+void gltf::image_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
 {
     if (property=="bufferView") input >> bufferView;
     else parser.warning();
 }
 
-void image_schema::read_object(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::image_schema::read_object(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property=="extras") parser.read_object(extras);
     else parser.warning();
@@ -217,45 +218,45 @@ void image_schema::read_object(vsg::JSONParser& parser, const std::string_view& 
 //
 // material_schema
 //
-void textureInfo_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+void gltf::textureInfo_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
 {
     if (property=="index") input >> index;
     else if (property=="texCoord") input >> texCoord;
     else parser.warning();
 }
 
-void pbrMetallicRoughness_schema::read_array(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::pbrMetallicRoughness_schema::read_array(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property == "baseColorFactor") parser.read_array(baseColorFactor);
     else parser.warning();
 }
 
-void pbrMetallicRoughness_schema::read_object(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::pbrMetallicRoughness_schema::read_object(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property == "baseColorTexture") parser.read_object(baseColorTexture);
     else if (property == "metallicRoughnessTexture") parser.read_object(metallicRoughnessTexture);
     else parser.warning();
 }
 
-void pbrMetallicRoughness_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+void gltf::pbrMetallicRoughness_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
 {
     if (property=="metallicFactor") input >> metallicFactor;
     else if (property=="roughnessFactor") input >> roughnessFactor;
     else parser.warning();
 }
 
-void normalTextureInfo_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+void gltf::normalTextureInfo_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
 {
     if (property == "scale") input >> scale;
     else textureInfo_schema::read_number(parser, property, input);
 }
 
-void occlusionTextureInfo_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+void gltf::occlusionTextureInfo_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
 {
     if (property == "strength") input >> strength;
     else textureInfo_schema::read_number(parser, property, input);
 }
-void material_schema::report()
+void gltf::material_schema::report()
 {
     vsg::info("material_schema { ");
     vsg::info("    name: ", name);
@@ -276,13 +277,13 @@ void material_schema::report()
     vsg::info("} ");
 }
 
-void material_schema::read_array(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::material_schema::read_array(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property == "emissiveFactor") parser.read_array(emissiveFactor);
     else parser.warning();
 }
 
-void material_schema::read_object(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::material_schema::read_object(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property == "pbrMetallicRoughness") parser.read_object(pbrMetallicRoughness);
     else if (property == "normalTexture") parser.read_object(normalTexture);
@@ -291,20 +292,20 @@ void material_schema::read_object(vsg::JSONParser& parser, const std::string_vie
     else parser.warning();
 }
 
-void material_schema::read_string(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::material_schema::read_string(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property=="name") parser.read_string(name);
     else if (property=="alphaMode" && parser.read_string(alphaMode)) {}
     else parser.warning();
 }
 
-void material_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+void gltf::material_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
 {
     if (property=="alphaCutoff") input >> alphaCutoff;
     else parser.warning();
 }
 
-void material_schema::read_bool(vsg::JSONParser& parser, const std::string_view& property, bool value)
+void gltf::material_schema::read_bool(vsg::JSONParser& parser, const std::string_view& property, bool value)
 {
     if (property=="doubleSided") doubleSided = value;
     else parser.warning();
@@ -314,12 +315,12 @@ void material_schema::read_bool(vsg::JSONParser& parser, const std::string_view&
 //
 // mesh_schema
 //
-void attributes_schema::read_number(vsg::JSONParser&, const std::string_view& property, std::istream& input)
+void gltf::attributes_schema::read_number(vsg::JSONParser&, const std::string_view& property, std::istream& input)
 {
     input >> values[std::string(property)];
 }
 
-void primitive_schema::report()
+void gltf::primitive_schema::report()
 {
     vsg::info("primitive_schema { ");
     vsg::info("    attributes = {");
@@ -339,7 +340,7 @@ void primitive_schema::report()
     vsg::info("} ");
 }
 
-void primitive_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+void gltf::primitive_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
 {
     if (property == "indices") input >> indices;
     else if (property == "material") input >> material;
@@ -347,20 +348,20 @@ void primitive_schema::read_number(vsg::JSONParser& parser, const std::string_vi
     else parser.warning();
 }
 
-void primitive_schema::read_array(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::primitive_schema::read_array(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property=="targets") parser.read_array(targets);
     else parser.warning();
 }
 
-void primitive_schema::read_object(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::primitive_schema::read_object(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property=="extras") parser.read_object(extras);
     else if (property == "attributes") parser.read_object(attributes);
     else parser.warning();
 }
 
-void mesh_schema::report()
+void gltf::mesh_schema::report()
 {
     vsg::info("mesh_schema { ");
     vsg::info("    name = ", name);
@@ -370,20 +371,20 @@ void mesh_schema::report()
     vsg::info("} ");
 }
 
-void mesh_schema::read_array(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::mesh_schema::read_array(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property == "primitives") parser.read_array(primitives);
     else if (property == "weights") parser.read_array(weights);
     else parser.warning();
 }
 
-void mesh_schema::read_string(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::mesh_schema::read_string(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property=="name") parser.read_string(name);
     else parser.warning();
 }
 
-void mesh_schema::read_object(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::mesh_schema::read_object(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property=="extras") parser.read_object(extras);
     else parser.warning();
@@ -393,7 +394,7 @@ void mesh_schema::read_object(vsg::JSONParser& parser, const std::string_view& p
 //
 // node_schema
 //
-void node_schema::report()
+void gltf::node_schema::report()
 {
     vsg::info("node_schema { ");
     vsg::info("    name: ", name);
@@ -409,7 +410,7 @@ void node_schema::report()
     vsg::info("} ");
 }
 
-void node_schema::read_array(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::node_schema::read_array(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property == "children") parser.read_array(children);
     else if (property == "matrix") parser.read_array(matrix);
@@ -420,13 +421,13 @@ void node_schema::read_array(vsg::JSONParser& parser, const std::string_view& pr
     else parser.warning();
 }
 
-void node_schema::read_string(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::node_schema::read_string(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property=="name") parser.read_string(name);
     else parser.warning();
 }
 
-void node_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+void gltf::node_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
 {
     if (property=="camera") input >> camera;
     else if (property=="skin") input >> skin;
@@ -438,7 +439,7 @@ void node_schema::read_number(vsg::JSONParser& parser, const std::string_view& p
 //
 // sampler_schema
 //
-void sampler_schema::report()
+void gltf::sampler_schema::report()
 {
     vsg::info("sampler_schema { ");
     vsg::info("    name: ", name);
@@ -449,13 +450,13 @@ void sampler_schema::report()
     vsg::info("} ");
 }
 
-void sampler_schema::read_string(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::sampler_schema::read_string(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property=="name") parser.read_string(name);
     else parser.warning();
 }
 
-void sampler_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+void gltf::sampler_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
 {
     if (property=="minFilter") input >> minFilter;
     else if (property=="magFilter") input >> magFilter;
@@ -469,18 +470,18 @@ void sampler_schema::read_number(vsg::JSONParser& parser, const std::string_view
 //
 // scene_schema
 //
-void scene_schema::report()
+void gltf::scene_schema::report()
 {
     vsg::info("scene_schema = { name = ", name, ", nodes = ", nodes.values.size(), " } ", this);
 }
 
-void scene_schema::read_array(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::scene_schema::read_array(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property == "nodes") parser.read_array(nodes);
     else parser.warning();
 }
 
-void scene_schema::read_string(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::scene_schema::read_string(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property=="name") parser.read_string(name);
     else parser.warning();
@@ -491,18 +492,18 @@ void scene_schema::read_string(vsg::JSONParser& parser, const std::string_view& 
 //
 // texture_schema
 //
-void texture_schema::report()
+void gltf::texture_schema::report()
 {
     vsg::info("texture_schema = { name = ", name, ", sampler = ", sampler, ", ", source, " } ", this);
 }
 
-void texture_schema::read_string(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::texture_schema::read_string(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property=="name") parser.read_string(name);
     else parser.warning();
 }
 
-void texture_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+void gltf::texture_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
 {
     if (property=="sampler") input >> sampler;
     else if (property=="source") input >> source;
@@ -514,7 +515,7 @@ void texture_schema::read_number(vsg::JSONParser& parser, const std::string_view
 //
 // glTF_schema
 //
-void glTF_schema::report()
+void gltf::glTF_schema::report()
 {
     asset.report();
     accessors.report();
@@ -530,7 +531,7 @@ void glTF_schema::report()
     textures.report();
 }
 
-void glTF_schema::read_array(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::glTF_schema::read_array(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property == "extensionsUsed") parser.read_array(extensionsUsed);
     else if (property == "extensionsRequired") parser.read_array(extensionsRequired);
@@ -559,7 +560,7 @@ void glTF_schema::read_array(vsg::JSONParser& parser, const std::string_view& pr
     else parser.warning();
 }
 
-void glTF_schema::read_object(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::glTF_schema::read_object(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property == "asset")
     {
@@ -570,7 +571,7 @@ void glTF_schema::read_object(vsg::JSONParser& parser, const std::string_view& p
     else parser.warning();
 }
 
-void glTF_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+void gltf::glTF_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
 {
     if (property == "scene") input >> scene;
     else parser.warning();
