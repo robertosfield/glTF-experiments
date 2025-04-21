@@ -15,690 +15,523 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include "gltf.h"
 
 #include <vsg/io/Path.h>
-#include <vsg/io/json.h>
 #include <vsg/io/mem_stream.h>
+#include <vsg/io/write.h>
 
 #include <fstream>
 
 using namespace vsgXchange;
 
-template<typename T>
-struct values_schema : public vsg::JSONParser::Schema
-{
-    std::vector<T> values;
-    void read_number(vsg::JSONParser& parser, std::istream& input) override
-    {
-        T value;
-        input >> value;
-        values.push_back(value);
-    }
-};
-
-template<typename T>
-struct objects_schema : public vsg::JSONParser::Schema
-{
-    std::vector<T> values;
-
-    void read_object(vsg::JSONParser& parser) override
-    {
-        values.emplace_back();
-        parser.read_object(values.back());
-    }
-
-    void report()
-    {
-        for(auto& value : values) value.report();
-    }
-};
-
-struct glTFid
-{
-    static const uint32_t invalid_value = std::numeric_limits<uint32_t>::max();
-
-    uint32_t value = invalid_value;
-
-    bool valid() const { return value != invalid_value; }
-
-    explicit operator bool() const noexcept { return valid(); }
-};
-
-/// output stream support for glTFid
-inline std::ostream& operator<<(std::ostream& output, const glTFid& id)
-{
-    output << "glTFid("<<id.value<<")";
-    return output;
-}
-
-/// input stream support for glTFid
-inline std::istream& operator>>(std::istream& input, glTFid& id)
-{
-    input >> id.value;
-    return input;
-}
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-// accessor_schema
+// Acessor
 //
-struct accessor_schema : public vsg::JSONParser::Schema
+void gltf::Acessor::report()
 {
-    std::string name;
-    glTFid bufferView;
-    uint32_t byteOffset = 0;
-    uint32_t componentType = 0;
-    bool normalized = false;
-    uint32_t count = 0;
-    std::string type;
-    values_schema<double> max;
-    values_schema<double> min;
+    vsg::info("Acessor { ");
+    vsg::info("    name = ", name);
+    vsg::info("    extras.object = ", extras.object, ", extras.objects = ", extras.objects);
+    vsg::info("    bufferView: ", bufferView);
+    vsg::info("    byteOffset: ", byteOffset);
+    vsg::info("    componentType: ", componentType);
+    vsg::info("    normalized: ", normalized);
+    vsg::info("    count: ", count);
+    vsg::info("    type: ", type);
+    for(auto& value : max.values) { vsg::info("    max : ", value); }
+    for(auto& value : min.values) { vsg::info("    min : ", value); }
+    vsg::info("} ");
+}
 
-    // sparse
-    // extensions
-    // extras
+void gltf::Acessor::read_array(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property == "max") parser.read_array(max);
+    else if (property == "min") parser.read_array(max);
+    else parser.warning();
+}
 
-    void report()
-    {
-        vsg::info("accessor_schema { ");
-        vsg::info("    bufferView: ", bufferView);
-        vsg::info("    byteOffset: ", byteOffset);
-        vsg::info("    componentType: ", componentType);
-        vsg::info("    normalized: ", normalized);
-        vsg::info("    count: ", count);
-        vsg::info("    type: ", type);
-        for(auto& value : max.values) { vsg::info("    max : ", value); }
-        for(auto& value : min.values) { vsg::info("    min : ", value); }
-        vsg::info("} ");
-    }
+void gltf::Acessor::read_string(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property=="name") parser.read_string(name);
+    else if (property=="type") parser.read_string(type);
+    else parser.warning();
+}
 
-    void read_array(vsg::JSONParser& parser, const std::string_view& property) override
-    {
-        if (property == "max") parser.read_array(max);
-        else if (property == "min") parser.read_array(max);
-        else parser.warning();
-    }
+void gltf::Acessor::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+{
+    if (property=="bufferView") input >> bufferView;
+    else if (property=="byteOffset") input >> byteOffset;
+    else if (property=="componentType") input >> componentType;
+    else if (property=="count") input >> count;
+    else parser.warning();
+}
 
-    void read_string(vsg::JSONParser& parser, const std::string_view& property) override
-    {
-        if (property=="name") parser.read_string(name);
-        else if (property=="type") parser.read_string(type);
-        else parser.warning();
-    }
+void gltf::Acessor::read_bool(vsg::JSONParser& parser, const std::string_view& property, bool value)
+{
+    if (property=="normalized") normalized = value;
+    else parser.warning();
+}
 
-    void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override
-    {
-        if (property=="bufferView") input >> bufferView;
-        else if (property=="byteOffset") input >> byteOffset;
-        else if (property=="componentType") input >> componentType;
-        else if (property=="count") input >> count;
-        else parser.warning();
-    }
-
-    void read_bool(vsg::JSONParser& parser, const std::string_view& property, bool value) override
-    {
-        if (property=="normalized") normalized = value;
-        else parser.warning();
-    }
-
-};
+void gltf::Acessor::read_object(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property=="extras") parser.read_object(extras);
+    else parser.warning();
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // asset_schema
 //
-struct asset_scheme : public vsg::JSONParser::Schema
+void gltf::Asset::report()
 {
-    std::string copyright;
-    std::string version;
-    std::string generator;
-    std::string minVersion;
+    vsg::info("Asset = {");
+    vsg::info("    extras.object = ", extras.object, ", extras.objects = ", extras.objects);
+    vsg::info("    copyright = ", copyright, ", generator = ", generator, ", version = ", version, ", minVersion = ", minVersion, " } ", this);
+    vsg::info(" } ", this);
+}
 
-    void report()
-    {
-        vsg::info("asset_scheme = { copyright = ", copyright, ", generator = ", generator, ", version = ", version, ", minVersion = ", minVersion, " } ", this);
-    }
+void gltf::Asset::read_string(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property=="copyright") { parser.read_string(copyright); }
+    else if (property=="generator") { parser.read_string(generator); }
+    else if (property=="version") { parser.read_string(version); }
+    else if (property=="minVersion") { parser.read_string(minVersion); }
+    else parser.warning();
+}
 
-    void read_string(vsg::JSONParser& parser, const std::string_view& property) override
-    {
-        if (property=="copyright") { parser.read_string(copyright); }
-        else if (property=="generator") { parser.read_string(generator); }
-        else if (property=="version") { parser.read_string(version); }
-        else if (property=="minVersion") { parser.read_string(minVersion); }
-        else parser.warning();
-    }
-};
+void gltf::Asset::read_object(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property=="extras") parser.read_object(extras);
+    else parser.warning();
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-// bufferView_schema
+// BufferView
 //
-struct bufferView_schema : public vsg::JSONParser::Schema
+void gltf::BufferView::report()
 {
-    glTFid buffer;
-    uint32_t byteOffset = 0;
-    uint32_t byteLength = 0;
-    uint32_t byteStride = 4;
-    uint32_t target = 0;
+    vsg::info("BufferView { ");
+    vsg::info("    name = ", name);
+    vsg::info("    extras.object = ", extras.object, ", extras.objects = ", extras.objects);
+    vsg::info("    buffer: ", buffer);
+    vsg::info("    byteOffset: ", byteOffset);
+    vsg::info("    byteLength: ", byteLength);
+    vsg::info("    byteStride: ", byteStride);
+    vsg::info("    target: ", target);
+    vsg::info("} ");
+}
 
-    // name
-    // extensions
-    // extras
-
-    void report()
-    {
-        vsg::info("bufferView_schema { ");
-        vsg::info("    buffer: ", buffer);
-        vsg::info("    byteOffset: ", byteOffset);
-        vsg::info("    byteLength: ", byteLength);
-        vsg::info("    byteStride: ", byteStride);
-        vsg::info("    target: ", target);
-        vsg::info("} ");
-    }
-
-    void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override
-    {
-        if (property=="buffer") input >> buffer;
-        else if (property=="byteOffset") input >> byteOffset;
-        else if (property=="byteLength") input >> byteLength;
-        else if (property=="byteStride") input >> byteStride;
-        else if (property=="target") input >> target;
-        else parser.warning();
-    }
-};
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-// buffer_schema
-//
-struct buffer_schema : public vsg::JSONParser::Schema
+void gltf::BufferView::read_string(vsg::JSONParser& parser, const std::string_view& property)
 {
-    std::string uri;
-    uint32_t byteLength = 0;
+    if (property=="name") parser.read_string(name);
+    else parser.warning();
+}
 
-    // name
-    // extensions
-    // extras
-
-    void report()
-    {
-        vsg::info("buffer_schema { ");
-        vsg::info("    uri: ", uri);
-        vsg::info("    byteLength: ", byteLength);
-        vsg::info("} ");
-    }
-
-    void read_string(vsg::JSONParser& parser, const std::string_view& property) override
-    {
-        if (property=="uri" && parser.read_string(uri)) {}
-        else parser.warning();
-    }
-
-    void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override
-    {
-        if (property=="byteLength") input >> byteLength;
-        else parser.warning();
-    }
-};
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-// image_schema
-//
-struct image_schema : public vsg::JSONParser::Schema
+void gltf::BufferView::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
 {
-    std::string uri;
-    std::string mimeType;
-    glTFid bufferView;
+    if (property=="buffer") input >> buffer;
+    else if (property=="byteOffset") input >> byteOffset;
+    else if (property=="byteLength") input >> byteLength;
+    else if (property=="byteStride") input >> byteStride;
+    else if (property=="target") input >> target;
+    else parser.warning();
+}
 
-    // name
-    // extensions
-    // extras
-
-    void report()
-    {
-        vsg::info("image_schema { ");
-        vsg::info("    uri: ", uri);
-        vsg::info("    mimeType: ", mimeType);
-        vsg::info("    bufferView: ", bufferView);
-        vsg::info("} ");
-    }
-
-    void read_string(vsg::JSONParser& parser, const std::string_view& property) override
-    {
-        if (property=="uri" && parser.read_string(uri)) {}
-        else if (property=="mimeType" && parser.read_string(mimeType)) {}
-        else parser.warning();
-    }
-
-    void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override
-    {
-        if (property=="bufferView") input >> bufferView;
-        else parser.warning();
-    }
-};
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-// material_schema
-//
-
-struct textureInfo_schema : public vsg::JSONParser::Schema
+void gltf::BufferView::read_object(vsg::JSONParser& parser, const std::string_view& property)
 {
-    glTFid index;
-    uint32_t texCoord = 0;
-
-    void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override
-    {
-        if (property=="index") input >> index;
-        else if (property=="texCoord") input >> texCoord;
-        else parser.warning();
-    }
-};
-
-struct pbrMetallicRoughness_schema : public vsg::JSONParser::Schema
-{
-    values_schema<double> baseColorFactor; // default { 1.0, 1.0, 1.0, 1.0 }
-    textureInfo_schema baseColorTexture;
-    double metallicFactor = 1.0;
-    double roughnessFactor = 1.0;
-    textureInfo_schema metallicRoughnessTexture;
-
-    void read_array(vsg::JSONParser& parser, const std::string_view& property) override
-    {
-        if (property == "baseColorFactor") parser.read_array(baseColorFactor);
-        else parser.warning();
-    }
-
-    void read_object(vsg::JSONParser& parser, const std::string_view& property) override
-    {
-        if (property == "baseColorTexture") parser.read_object(baseColorTexture);
-        else if (property == "metallicRoughnessTexture") parser.read_object(metallicRoughnessTexture);
-        else parser.warning();
-    }
-
-    void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override
-    {
-        if (property=="metallicFactor") input >> metallicFactor;
-        else if (property=="roughnessFactor") input >> roughnessFactor;
-        else parser.warning();
-    }
-};
-
-struct normalTextureInfo_schema : public textureInfo_schema
-{
-    double scale = 1.0;
-
-    void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override
-    {
-        read_number(parser, property, input);
-        if (property == "scale") input >> scale;
-    }
-};
-
-struct occlusionTextureInfo_schema : public textureInfo_schema
-{
-    double strength = 1.0;
-
-    void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override
-    {
-        read_number(parser, property, input);
-        if (property == "strength") input >> strength;
-    }
-};
-
-struct material_schema : public vsg::JSONParser::Schema
-{
-    std::string name;
-    pbrMetallicRoughness_schema pbrMetallicRoughness;
-    normalTextureInfo_schema normalTexture;
-    occlusionTextureInfo_schema occlusionTexture;
-    textureInfo_schema emissiveTexture;
-    values_schema<double> emissiveFactor; // default { 0.0, 0.0, 0.0 }
-    std::string alphaMode = "OPAQUE";
-    double alphaCutoff = 0.5;
-    bool doubleSided = false;
-
-    // extensions
-    // extras
-
-    void report()
-    {
-        vsg::info("material_schema { ");
-        vsg::info("    name: ", name);
-        vsg::info("    pbrMetallicRoughness.baseColorFactor = ", pbrMetallicRoughness.baseColorFactor.values.size(), " }" );
-        vsg::info("    pbrMetallicRoughness.baseColorTexture = { ", pbrMetallicRoughness.baseColorTexture.index, ", ", pbrMetallicRoughness.baseColorTexture.texCoord, " }" );
-        vsg::info("    pbrMetallicRoughness.metallicFactor ", pbrMetallicRoughness.metallicFactor);
-        vsg::info("    pbrMetallicRoughness.roughnessFactor ", pbrMetallicRoughness.roughnessFactor);
-        vsg::info("    pbrMetallicRoughness.metallicRoughnessTexture = { ", pbrMetallicRoughness.metallicRoughnessTexture.index, ", ", pbrMetallicRoughness.metallicRoughnessTexture.texCoord, " }" );
-        vsg::info("    normalTexture = { ", normalTexture.index, ", ", normalTexture.texCoord, " }");
-        vsg::info("    occlusionTexture = { ", occlusionTexture.index, ", ", occlusionTexture.texCoord, " }");
-        vsg::info("    emissiveTexture = { ", emissiveTexture.index, ", ", emissiveTexture.texCoord, " }");
-        vsg::info("    emissiveFactor : ", emissiveFactor.values.size(), " {");
-        for(auto value : emissiveFactor.values) vsg::info("     ", value);
-        vsg::info("    }");
-        vsg::info("    alphaMode : ", alphaMode);
-        vsg::info("    alphaCutoff : ", alphaCutoff);
-        vsg::info("    doubleSided : ", doubleSided);
-        vsg::info("} ");
-    }
-
-    void read_array(vsg::JSONParser& parser, const std::string_view& property) override
-    {
-        if (property == "emissiveFactor") parser.read_array(emissiveFactor);
-        else parser.warning();
-    }
-
-    void read_object(vsg::JSONParser& parser, const std::string_view& property) override
-    {
-        if (property == "pbrMetallicRoughness") parser.read_object(pbrMetallicRoughness);
-        else if (property == "normalTexture") parser.read_object(normalTexture);
-        else if (property == "occlusionTexture") parser.read_object(occlusionTexture);
-        else if (property == "emissiveTexture") parser.read_object(emissiveTexture);
-        else parser.warning();
-    }
-
-    void read_string(vsg::JSONParser& parser, const std::string_view& property) override
-    {
-        if (property=="name") parser.read_string(name);
-        else if (property=="alphaMode" && parser.read_string(alphaMode)) {}
-        else parser.warning();
-    }
-
-    void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override
-    {
-        if (property=="alphaCutoff") input >> alphaCutoff;
-        else parser.warning();
-    }
-};
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-// mesh_schema
-//
-struct attributes_schema : public vsg::JSONParser::Schema
-{
-    std::map<std::string, uint32_t> values;
-
-    void read_number(vsg::JSONParser&, const std::string_view& property, std::istream& input) override
-    {
-        input >> values[std::string(property)];
-    }
-};
-
-struct primitive_schema : public vsg::JSONParser::Schema
-{
-    attributes_schema attributes;
-    glTFid indices;
-    glTFid material;
-    uint32_t mode = 0;
-
-    void read_object(vsg::JSONParser& parser, const std::string_view& property) override
-    {
-        if (property == "attributes") parser.read_object(attributes);
-        else parser.warning();
-    }
-
-    void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override
-    {
-        if (property == "indices") input >> indices;
-        else if (property == "material") input >> material;
-        else if (property == "mode") input >> mode;
-        else parser.warning();
-    }
-
-    void report()
-    {
-        vsg::info("primitive_schema { ");
-        vsg::info("    attributes = {");
-        for(auto& [semantic, value] : attributes.values) vsg::info("        ", semantic, ", ", value);
-        vsg::info("    }");
-        vsg::info("    indices = ", indices);
-        vsg::info("    material = ", material);
-        vsg::info("    mode = ", mode);
-        vsg::info("} ");
-    }
-};
-
-struct mesh_schema : public vsg::JSONParser::Schema
-{
-    std::string name;
-    objects_schema<primitive_schema> primitives;
-    values_schema<double> weights;
-
-    // extensions
-    // extras
-
-    void report()
-    {
-        vsg::info("mesh_schema { ");
-        vsg::info("    name: ", name);
-        vsg::info("    primitives: ", primitives.values.size());
-        vsg::info("    weights: ", weights.values.size());
-        vsg::info("} ");
-    }
-
-    void read_array(vsg::JSONParser& parser, const std::string_view& property) override
-    {
-        if (property == "primitives") parser.read_array(primitives);
-        else if (property == "weights") parser.read_array(weights);
-        else parser.warning();
-    }
-
-    void read_string(vsg::JSONParser& parser, const std::string_view& property) override
-    {
-        if (property=="name") parser.read_string(name);
-        else parser.warning();
-    }
-};
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-// node_schema
-//
-struct node_schema : public vsg::JSONParser::Schema
-{
-    std::string name;
-
-    glTFid camera;
-    glTFid skin;
-    glTFid mesh;
-    values_schema<uint32_t> children;
-    values_schema<double> matrix;
-    values_schema<double> rotation;
-    values_schema<double> scale;
-    values_schema<double> translation;
-    values_schema<double> weights;
-
-    // extensions
-    // extras
-
-    void report()
-    {
-        vsg::info("node_schema { ");
-        vsg::info("    name: ", name);
-        if (camera) vsg::info("    camera: ", camera);
-        if (skin) vsg::info("    skin: ", skin);
-        if (mesh) vsg::info("    mesh: ", mesh);
-        vsg::info("    children: ", children.values.size());
-        vsg::info("    matrix: ", matrix.values.size());
-        vsg::info("    rotation: ", rotation.values.size());
-        vsg::info("    scale: ", scale.values.size());
-        vsg::info("    translation: ", translation.values.size());
-        vsg::info("    weights: ", weights.values.size());
-        vsg::info("} ");
-    }
-
-    void read_array(vsg::JSONParser& parser, const std::string_view& property) override
-    {
-        if (property == "children") parser.read_array(children);
-        else if (property == "matrix") parser.read_array(matrix);
-        else if (property == "rotation") parser.read_array(rotation);
-        else if (property == "scale") parser.read_array(scale);
-        else if (property == "translation") parser.read_array(translation);
-        else if (property == "weights") parser.read_array(weights);
-        else parser.warning();
-    }
-
-    void read_string(vsg::JSONParser& parser, const std::string_view& property) override
-    {
-        if (property=="name") parser.read_string(name);
-        else parser.warning();
-    }
-
-    void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override
-    {
-        if (property=="camera") input >> camera;
-        else if (property=="skin") input >> skin;
-        else if (property=="mesh") input >> mesh;
-        else parser.warning();
-    }
-};
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-//
-// sampler_schema
-//
-struct sampler_schema : public vsg::JSONParser::Schema
-{
-    std::string name;
-    uint32_t minFilter = 0;
-    uint32_t magFilter = 0;
-    uint32_t wrapS = 0;
-    uint32_t wrapT = 0;
-
-    // extensions
-    // extras
-
-    void report()
-    {
-        vsg::info("sampler_schema { ");
-        vsg::info("    name: ", name);
-        vsg::info("    minFilter: ", minFilter);
-        vsg::info("    magFilter: ", magFilter);
-        vsg::info("    wrapS: ", wrapS);
-        vsg::info("    wrapT: ", wrapT);
-        vsg::info("} ");
-    }
-
-    void read_string(vsg::JSONParser& parser, const std::string_view& property) override
-    {
-        if (property=="name") parser.read_string(name);
-        else parser.warning();
-    }
-
-    void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override
-    {
-        if (property=="minFilter") input >> minFilter;
-        else if (property=="magFilter") input >> magFilter;
-        else if (property=="wrapS") input >> wrapS;
-        else if (property=="wrapT") input >> wrapT;
-        else parser.warning();
-    }
-};
+    if (property=="extras") parser.read_object(extras);
+    else parser.warning();
+}
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-// scene_schema
+// Buffer
 //
-struct scene_schema : public vsg::JSONParser::Schema
+void gltf::Buffer::report()
 {
-    std::string name;
-    values_schema<glTFid> nodes;
+    vsg::info("Buffer { ");
+    vsg::info("    name = ", name);
+    vsg::info("    extras.object = ", extras.object, ", extras.objects = ", extras.objects);
+    vsg::info("    uri: ", uri);
+    vsg::info("    byteLength: ", byteLength);
+    vsg::info("} ");
+}
 
-    void report()
-    {
-        vsg::info("scene_schema = { name = ", name, ", nodes = ", nodes.values.size(), " } ", this);
-    }
+void gltf::Buffer::read_string(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property=="name") parser.read_string(name);
+    else if (property=="uri" && parser.read_string(uri)) {}
+    else parser.warning();
+}
 
-    void read_array(vsg::JSONParser& parser, const std::string_view& property) override
-    {
-        if (property == "nodes") parser.read_array(nodes);
-        else parser.warning();
-    }
+void gltf::Buffer::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+{
+    if (property=="byteLength") input >> byteLength;
+    else parser.warning();
+}
 
-    void read_string(vsg::JSONParser& parser, const std::string_view& property) override
+void gltf::Buffer::read_object(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property=="extras") parser.read_object(extras);
+    else parser.warning();
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Image
+//
+void gltf::Image::report()
+{
+    vsg::info("Image { ");
+    vsg::info("    name = ", name);
+    vsg::info("    extras.object = ", extras.object, ", extras.objects = ", extras.objects);
+    vsg::info("    uri: ", uri);
+    vsg::info("    mimeType: ", mimeType);
+    vsg::info("    bufferView: ", bufferView);
+    vsg::info("} ");
+}
+
+void gltf::Image::read_string(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property=="name") parser.read_string(name);
+    else if (property=="uri" && parser.read_string(uri)) {}
+    else if (property=="mimeType" && parser.read_string(mimeType)) {}
+    else parser.warning();
+}
+
+void gltf::Image::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+{
+    if (property=="bufferView") input >> bufferView;
+    else parser.warning();
+}
+
+void gltf::Image::read_object(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property=="extras") parser.read_object(extras);
+    else parser.warning();
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Material
+//
+void gltf::TextureInfo::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+{
+    if (property=="index") input >> index;
+    else if (property=="texCoord") input >> texCoord;
+    else parser.warning();
+}
+
+void gltf::PbrMetallicRoughness::read_array(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property == "baseColorFactor") parser.read_array(baseColorFactor);
+    else parser.warning();
+}
+
+void gltf::PbrMetallicRoughness::read_object(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property == "baseColorTexture") parser.read_object(baseColorTexture);
+    else if (property == "metallicRoughnessTexture") parser.read_object(metallicRoughnessTexture);
+    else parser.warning();
+}
+
+void gltf::PbrMetallicRoughness::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+{
+    if (property=="metallicFactor") input >> metallicFactor;
+    else if (property=="roughnessFactor") input >> roughnessFactor;
+    else parser.warning();
+}
+
+void gltf::NormalTextureInfo::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+{
+    if (property == "scale") input >> scale;
+    else TextureInfo::read_number(parser, property, input);
+}
+
+void gltf::OcclusionTextureInfo::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+{
+    if (property == "strength") input >> strength;
+    else TextureInfo::read_number(parser, property, input);
+}
+void gltf::Material::report()
+{
+    vsg::info("Material { ");
+    vsg::info("    name: ", name);
+    vsg::info("    pbrMetallicRoughness.baseColorFactor = ", pbrMetallicRoughness.baseColorFactor.values.size(), " }" );
+    vsg::info("    pbrMetallicRoughness.baseColorTexture = { ", pbrMetallicRoughness.baseColorTexture.index, ", ", pbrMetallicRoughness.baseColorTexture.texCoord, " }" );
+    vsg::info("    pbrMetallicRoughness.metallicFactor ", pbrMetallicRoughness.metallicFactor);
+    vsg::info("    pbrMetallicRoughness.roughnessFactor ", pbrMetallicRoughness.roughnessFactor);
+    vsg::info("    pbrMetallicRoughness.metallicRoughnessTexture = { ", pbrMetallicRoughness.metallicRoughnessTexture.index, ", ", pbrMetallicRoughness.metallicRoughnessTexture.texCoord, " }" );
+    vsg::info("    normalTexture = { ", normalTexture.index, ", ", normalTexture.texCoord, " }");
+    vsg::info("    occlusionTexture = { ", occlusionTexture.index, ", ", occlusionTexture.texCoord, " }");
+    vsg::info("    emissiveTexture = { ", emissiveTexture.index, ", ", emissiveTexture.texCoord, " }");
+    vsg::info("    emissiveFactor : ", emissiveFactor.values.size(), " {");
+    for(auto value : emissiveFactor.values) vsg::info("     ", value);
+    vsg::info("    }");
+    vsg::info("    alphaMode : ", alphaMode);
+    vsg::info("    alphaCutoff : ", alphaCutoff);
+    vsg::info("    doubleSided : ", doubleSided);
+    vsg::info("} ");
+}
+
+void gltf::Material::read_array(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property == "emissiveFactor") parser.read_array(emissiveFactor);
+    else parser.warning();
+}
+
+void gltf::Material::read_object(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property == "pbrMetallicRoughness") parser.read_object(pbrMetallicRoughness);
+    else if (property == "normalTexture") parser.read_object(normalTexture);
+    else if (property == "occlusionTexture") parser.read_object(occlusionTexture);
+    else if (property == "emissiveTexture") parser.read_object(emissiveTexture);
+    else parser.warning();
+}
+
+void gltf::Material::read_string(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property=="name") parser.read_string(name);
+    else if (property=="alphaMode" && parser.read_string(alphaMode)) {}
+    else parser.warning();
+}
+
+void gltf::Material::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+{
+    if (property=="alphaCutoff") input >> alphaCutoff;
+    else parser.warning();
+}
+
+void gltf::Material::read_bool(vsg::JSONParser& parser, const std::string_view& property, bool value)
+{
+    if (property=="doubleSided") doubleSided = value;
+    else parser.warning();
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Mesh
+//
+void gltf::Attributes::read_number(vsg::JSONParser&, const std::string_view& property, std::istream& input)
+{
+    input >> values[std::string(property)];
+}
+
+void gltf::Primitive::report()
+{
+    vsg::info("Primitive { ");
+    vsg::info("    attributes = {");
+    for(auto& [semantic, id] : attributes.values) vsg::info("        ", semantic, ", ", id);
+    vsg::info("    }");
+    vsg::info("    indices = ", indices);
+    vsg::info("    material = ", material);
+    vsg::info("    mode = ", mode);
+    vsg::info("    targets = [");
+    for(auto& value : targets.values)
     {
-        if (property=="name") parser.read_string(name);
-        else parser.warning();
+        vsg::info("        {");
+        for(auto& [semantic, id] : value.values) vsg::info("            ", semantic, ", ", id);
+        vsg::info("        }");
     }
-};
+    vsg::info("    ]");
+    vsg::info("} ");
+}
+
+void gltf::Primitive::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+{
+    if (property == "indices") input >> indices;
+    else if (property == "material") input >> material;
+    else if (property == "mode") input >> mode;
+    else parser.warning();
+}
+
+void gltf::Primitive::read_array(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property=="targets") parser.read_array(targets);
+    else parser.warning();
+}
+
+void gltf::Primitive::read_object(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property=="extras") parser.read_object(extras);
+    else if (property == "attributes") parser.read_object(attributes);
+    else parser.warning();
+}
+
+void gltf::Mesh::report()
+{
+    vsg::info("Mesh { ");
+    vsg::info("    name = ", name);
+    vsg::info("    extras.object = ", extras.object, ", extras.objects = ", extras.objects);
+    vsg::info("    primitives: ", primitives.values.size());
+    vsg::info("    weights: ", weights.values.size());
+    vsg::info("} ");
+}
+
+void gltf::Mesh::read_array(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property == "primitives") parser.read_array(primitives);
+    else if (property == "weights") parser.read_array(weights);
+    else parser.warning();
+}
+
+void gltf::Mesh::read_string(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property=="name") parser.read_string(name);
+    else parser.warning();
+}
+
+void gltf::Mesh::read_object(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property=="extras") parser.read_object(extras);
+    else parser.warning();
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Node
+//
+void gltf::Node::report()
+{
+    vsg::info("Node { ");
+    vsg::info("    name: ", name);
+    if (camera) vsg::info("    camera: ", camera);
+    if (skin) vsg::info("    skin: ", skin);
+    if (mesh) vsg::info("    mesh: ", mesh);
+    vsg::info("    children: ", children.values.size());
+    vsg::info("    matrix: ", matrix.values.size());
+    vsg::info("    rotation: ", rotation.values.size());
+    vsg::info("    scale: ", scale.values.size());
+    vsg::info("    translation: ", translation.values.size());
+    vsg::info("    weights: ", weights.values.size());
+    vsg::info("} ");
+}
+
+void gltf::Node::read_array(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property == "children") parser.read_array(children);
+    else if (property == "matrix") parser.read_array(matrix);
+    else if (property == "rotation") parser.read_array(rotation);
+    else if (property == "scale") parser.read_array(scale);
+    else if (property == "translation") parser.read_array(translation);
+    else if (property == "weights") parser.read_array(weights);
+    else parser.warning();
+}
+
+void gltf::Node::read_string(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property=="name") parser.read_string(name);
+    else parser.warning();
+}
+
+void gltf::Node::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+{
+    if (property=="camera") input >> camera;
+    else if (property=="skin") input >> skin;
+    else if (property=="mesh") input >> mesh;
+    else parser.warning();
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Sampler
+//
+void gltf::Sampler::report()
+{
+    vsg::info("Sampler { ");
+    vsg::info("    name: ", name);
+    vsg::info("    minFilter: ", minFilter);
+    vsg::info("    magFilter: ", magFilter);
+    vsg::info("    wrapS: ", wrapS);
+    vsg::info("    wrapT: ", wrapT);
+    vsg::info("} ");
+}
+
+void gltf::Sampler::read_string(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property=="name") parser.read_string(name);
+    else parser.warning();
+}
+
+void gltf::Sampler::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+{
+    if (property=="minFilter") input >> minFilter;
+    else if (property=="magFilter") input >> magFilter;
+    else if (property=="wrapS") input >> wrapS;
+    else if (property=="wrapT") input >> wrapT;
+    else parser.warning();
+}
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-// texture_schema
+// Scene
 //
-struct texture_schema : public vsg::JSONParser::Schema
+void gltf::Scene::report()
 {
-    std::string name;
-    glTFid sampler;
-    glTFid source;
+    vsg::info("Scene = { name = ", name, ", nodes = ", nodes.values.size(), " } ", this);
+}
 
-    void report()
-    {
-        vsg::info("texture_schema = { name = ", name, ", sampler = ", sampler, ", ", source, " } ", this);
-    }
+void gltf::Scene::read_array(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property == "nodes") parser.read_array(nodes);
+    else parser.warning();
+}
 
-    void read_string(vsg::JSONParser& parser, const std::string_view& property) override
-    {
-        if (property=="name") parser.read_string(name);
-        else parser.warning();
-    }
-
-    void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override
-    {
-        if (property=="sampler") input >> sampler;
-        else if (property=="source") input >> source;
-        else parser.warning();
-    }
-};
+void gltf::Scene::read_string(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property=="name") parser.read_string(name);
+    else parser.warning();
+}
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-// glTF_schema
+// Texture
 //
-struct glTF_schema : public vsg::JSONParser::Schema
+void gltf::Texture::report()
 {
-    values_schema<std::string> extensionsUsed;
-    values_schema<std::string> extensionsRequired;
-    asset_scheme asset;
-    objects_schema<accessor_schema> accessors;
-    objects_schema<bufferView_schema> bufferViews;
-    objects_schema<buffer_schema> buffers;
-    objects_schema<image_schema> images;
-    objects_schema<material_schema> materials;
-    objects_schema<mesh_schema> meshes;
-    objects_schema<node_schema> nodes;
-    objects_schema<sampler_schema> samplers;
-    glTFid scene;
-    objects_schema<scene_schema> scenes;
-    objects_schema<texture_schema> textures;
+    vsg::info("Texture = { name = ", name, ", sampler = ", sampler, ", ", source, " } ", this);
+}
 
-    void read_array(vsg::JSONParser& parser, const std::string_view& property) override;
-    void read_object(vsg::JSONParser& parser, const std::string_view& property) override;
-    void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
+void gltf::Texture::read_string(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property=="name") parser.read_string(name);
+    else parser.warning();
+}
 
-    void report()
-    {
-        asset.report();
-        accessors.report();
-        bufferViews.report();
-        buffers.report();
-        images.report();
-        materials.report();
-        meshes.report();
-        nodes.report();
-        samplers.report();
-        vsg::info("scene = ", scene);
-        scenes.report();
-        textures.report();
-    }
-};
+void gltf::Texture::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+{
+    if (property=="sampler") input >> sampler;
+    else if (property=="source") input >> source;
+    else parser.warning();
+}
 
-void glTF_schema::read_array(vsg::JSONParser& parser, const std::string_view& property)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// glTF
+//
+void gltf::glTF::report()
+{
+    asset.report();
+    accessors.report();
+    bufferViews.report();
+    buffers.report();
+    images.report();
+    materials.report();
+    meshes.report();
+    nodes.report();
+    samplers.report();
+    vsg::info("scene = ", scene);
+    scenes.report();
+    textures.report();
+}
+
+void gltf::glTF::read_array(vsg::JSONParser& parser, const std::string_view& property)
 {
     if (property == "extensionsUsed") parser.read_array(extensionsUsed);
     else if (property == "extensionsRequired") parser.read_array(extensionsRequired);
@@ -727,13 +560,18 @@ void glTF_schema::read_array(vsg::JSONParser& parser, const std::string_view& pr
     else parser.warning();
 }
 
-void glTF_schema::read_object(vsg::JSONParser& parser, const std::string_view& property)
+void gltf::glTF::read_object(vsg::JSONParser& parser, const std::string_view& property)
 {
-    if (property == "asset") parser.read_object(asset);
+    if (property == "asset")
+    {
+        parser.read_object(asset);
+        asset.report();
+        vsg::write(asset.extras.object, "extras.vsgt");
+    }
     else parser.warning();
 }
 
-void glTF_schema::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+void gltf::glTF::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
 {
     if (property == "scene") input >> scene;
     else parser.warning();
@@ -760,8 +598,10 @@ vsg::ref_ptr<vsg::Object> gltf::_read(std::istream& fin, vsg::ref_ptr<const vsg:
     if (fileSize==0) return {};
 
     vsg::JSONParser parser;
+    //parser.level = vsg::Logger::LOGGER_FATAL;
+    //parser.level = vsg::Logger::LOGGER_DEBUG;
 
-    glTF_schema schema;
+    glTF schema;
 
     parser.buffer.resize(fileSize);
 
