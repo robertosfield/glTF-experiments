@@ -41,6 +41,8 @@ namespace vsgXchange
 
         vsg::ref_ptr<vsg::Object> _read(std::istream&, vsg::ref_ptr<const vsg::Options>) const;
 
+        vsg::Logger::Level level = vsg::Logger::LOGGER_WARN;
+
         bool supportedExtension(const vsg::Path& ext) const;
 
         bool getFeatures(Features& features) const override;
@@ -186,6 +188,36 @@ namespace vsgXchange
             void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
         };
 
+        /// https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_specular/README.md
+        struct KHR_materials_specular : public vsg::JSONParser::Schema
+        {
+            double specularFactor = 1.0;
+            TextureInfo specularTexture;
+            vsg::ValuesSchema<double> specularColorFactor;
+            TextureInfo specularColorTexture;
+
+            void read_array(vsg::JSONParser& parser, const std::string_view& property) override;
+            void read_object(vsg::JSONParser& parser, const std::string_view& property) override;
+            void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
+        };
+
+        /// https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_ior/README.md
+        struct KHR_materials_ior : public vsg::JSONParser::Schema
+        {
+            double ior = 1.5;
+
+            void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
+        };
+
+        // extensions
+        struct Material_extensions : public vsg::JSONParser::Schema
+        {
+            KHR_materials_specular specular;
+            KHR_materials_ior ior;
+
+            void read_object(vsg::JSONParser& parser, const std::string_view& property) override;
+        };
+
         struct Material : public vsg::JSONParser::Schema
         {
             std::string name;
@@ -198,7 +230,8 @@ namespace vsgXchange
             double alphaCutoff = 0.5;
             bool doubleSided = false;
 
-            // extensions
+            Material_extensions extensions;
+
             // extras
 
             void report();
@@ -308,6 +341,58 @@ namespace vsgXchange
             void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
         };
 
+        struct AnimationTarget : public vsg::JSONParser::Schema
+        {
+            glTFid node;
+            std::string path;
+
+            // extensions
+            // extras
+
+            void read_string(vsg::JSONParser& parser, const std::string_view& property) override;
+            void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
+        };
+
+        struct AnimationChannel : public vsg::JSONParser::Schema
+        {
+            glTFid sampler;
+            AnimationTarget target;
+
+            // extensions
+            // extras
+
+            void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
+            void read_object(vsg::JSONParser& parser, const std::string_view& property) override;
+        };
+
+        struct AnimationSampler : public vsg::JSONParser::Schema
+        {
+            glTFid input;
+            std::string interpolation;
+            glTFid output;
+
+            // extensions
+            // extras
+
+            void read_string(vsg::JSONParser& parser, const std::string_view& property) override;
+            void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
+        };
+
+        struct Animation : public vsg::JSONParser::Schema
+        {
+            std::string name;
+            vsg::JSONtoMetaDataSchema extras;
+            vsg::ObjectsSchema<AnimationChannel> channels;
+            vsg::ObjectsSchema<AnimationSampler> samplers;
+
+            // extensions
+
+            void report();
+            void read_array(vsg::JSONParser& parser, const std::string_view& property) override;
+            void read_string(vsg::JSONParser& parser, const std::string_view& property) override;
+            void read_object(vsg::JSONParser& parser, const std::string_view& property) override;
+        };
+
         struct glTF : public vsg::JSONParser::Schema
         {
             vsg::ValuesSchema<std::string> extensionsUsed;
@@ -324,6 +409,7 @@ namespace vsgXchange
             glTFid scene;
             vsg::ObjectsSchema<Scene> scenes;
             vsg::ObjectsSchema<Texture> textures;
+            vsg::ObjectsSchema<Animation> animations;
 
             void read_array(vsg::JSONParser& parser, const std::string_view& property) override;
             void read_object(vsg::JSONParser& parser, const std::string_view& property) override;
@@ -331,6 +417,9 @@ namespace vsgXchange
 
             void report();
         };
+
+    public:
+
 
     };
 

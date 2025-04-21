@@ -30,16 +30,10 @@ int main(int argc, char** argv)
 
     if (arguments.errors()) return arguments.writeErrorMessages(std::cerr);
 
-    options->add(vsg::json::create());
-    options->add(vsgXchange::gltf::create());
+    auto gltf = vsgXchange::gltf::create();
+    if (int log_level = 0; arguments.read("--log-level", log_level)) gltf->level = vsg::Logger::Level(log_level);
 
-    if (!arguments.read("--clean"))
-    {
-#ifdef vsgXchange_all
-    // add use of vsgXchange's support for reading and writing 3rd party file formats
-    options->add(vsgXchange::all::create());
-#endif
-    }
+    options->add(gltf);
 
     auto outputFilename = arguments.value<vsg::Path>("", "-o");
 
