@@ -58,10 +58,6 @@ namespace vsgXchange
             explicit operator bool() const noexcept { return valid(); }
         };
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////
-        //
-        // Acessor
-        //
         struct Acessor : public vsg::JSONParser::Schema
         {
             std::string name;
@@ -88,10 +84,6 @@ namespace vsgXchange
 
         };
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////
-        //
-        // asset_schema
-        //
         struct Asset : public vsg::JSONParser::Schema
         {
             vsg::JSONtoMetaDataSchema extras;
@@ -105,10 +97,6 @@ namespace vsgXchange
             void read_object(vsg::JSONParser& parser, const std::string_view& property) override;
         };
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////
-        //
-        // BufferView
-        //
         struct BufferView : public vsg::JSONParser::Schema
         {
             std::string name;
@@ -119,7 +107,6 @@ namespace vsgXchange
             uint32_t byteStride = 4;
             uint32_t target = 0;
 
-            // name
             // extensions
             // extras
 
@@ -129,11 +116,6 @@ namespace vsgXchange
             void read_object(vsg::JSONParser& parser, const std::string_view& property) override;
         };
 
-
-        ////////////////////////////////////////////////////////////////////////////////////////////////////
-        //
-        // Buffer
-        //
         struct Buffer : public vsg::JSONParser::Schema
         {
             std::string name;
@@ -151,10 +133,6 @@ namespace vsgXchange
             void read_object(vsg::JSONParser& parser, const std::string_view& property) override;
         };
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////
-        //
-        // Image
-        //
         struct Image : public vsg::JSONParser::Schema
         {
             std::string name;
@@ -172,11 +150,6 @@ namespace vsgXchange
             void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
             void read_object(vsg::JSONParser& parser, const std::string_view& property) override;
         };
-
-        ////////////////////////////////////////////////////////////////////////////////////////////////////
-        //
-        // Material
-        //
 
         struct TextureInfo : public vsg::JSONParser::Schema
         {
@@ -237,10 +210,6 @@ namespace vsgXchange
 
         };
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////
-        //
-        // Mesh
-        //
         struct Attributes : public vsg::JSONParser::Schema
         {
             std::map<std::string, uint32_t> values;
@@ -279,10 +248,6 @@ namespace vsgXchange
             void read_object(vsg::JSONParser& parser, const std::string_view& property) override;
         };
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////
-        //
-        // Node
-        //
         struct Node : public vsg::JSONParser::Schema
         {
             std::string name;
@@ -306,10 +271,6 @@ namespace vsgXchange
             void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
         };
 
-        ////////////////////////////////////////////////////////////////////////////////////////////////////
-        //
-        // Sampler
-        //
         struct Sampler : public vsg::JSONParser::Schema
         {
             std::string name;
@@ -326,11 +287,6 @@ namespace vsgXchange
             void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
         };
 
-
-        ////////////////////////////////////////////////////////////////////////////////////////////////////
-        //
-        // Scene
-        //
         struct Scene : public vsg::JSONParser::Schema
         {
             std::string name;
@@ -341,11 +297,6 @@ namespace vsgXchange
             void read_string(vsg::JSONParser& parser, const std::string_view& property) override;
         };
 
-
-        ////////////////////////////////////////////////////////////////////////////////////////////////////
-        //
-        // Texture
-        //
         struct Texture : public vsg::JSONParser::Schema
         {
             std::string name;
@@ -357,11 +308,6 @@ namespace vsgXchange
             void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
         };
 
-
-        ////////////////////////////////////////////////////////////////////////////////////////////////////
-        //
-        // glTF
-        //
         struct glTF : public vsg::JSONParser::Schema
         {
             vsg::ValuesSchema<std::string> extensionsUsed;
@@ -387,7 +333,6 @@ namespace vsgXchange
         };
 
     };
-
 
     /// output stream support for glTFid
     inline std::ostream& operator<<(std::ostream& output, const gltf::glTFid& id)
