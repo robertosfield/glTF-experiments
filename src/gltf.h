@@ -60,9 +60,9 @@ namespace vsgXchange
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         //
-        // accessor_schema
+        // Acessor
         //
-        struct accessor_schema : public vsg::JSONParser::Schema
+        struct Acessor : public vsg::JSONParser::Schema
         {
             std::string name;
             vsg::JSONtoMetaDataSchema extras;
@@ -92,7 +92,7 @@ namespace vsgXchange
         //
         // asset_schema
         //
-        struct asset_scheme : public vsg::JSONParser::Schema
+        struct Asset : public vsg::JSONParser::Schema
         {
             vsg::JSONtoMetaDataSchema extras;
             std::string copyright;
@@ -107,9 +107,9 @@ namespace vsgXchange
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         //
-        // bufferView_schema
+        // BufferView
         //
-        struct bufferView_schema : public vsg::JSONParser::Schema
+        struct BufferView : public vsg::JSONParser::Schema
         {
             std::string name;
             vsg::JSONtoMetaDataSchema extras;
@@ -132,9 +132,9 @@ namespace vsgXchange
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         //
-        // buffer_schema
+        // Buffer
         //
-        struct buffer_schema : public vsg::JSONParser::Schema
+        struct Buffer : public vsg::JSONParser::Schema
         {
             std::string name;
             vsg::JSONtoMetaDataSchema extras;
@@ -153,9 +153,9 @@ namespace vsgXchange
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         //
-        // image_schema
+        // Image
         //
-        struct image_schema : public vsg::JSONParser::Schema
+        struct Image : public vsg::JSONParser::Schema
         {
             std::string name;
             vsg::JSONtoMetaDataSchema extras;
@@ -175,10 +175,10 @@ namespace vsgXchange
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         //
-        // material_schema
+        // Material
         //
 
-        struct textureInfo_schema : public vsg::JSONParser::Schema
+        struct TextureInfo : public vsg::JSONParser::Schema
         {
             glTFid index;
             uint32_t texCoord = 0;
@@ -186,40 +186,40 @@ namespace vsgXchange
             void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
         };
 
-        struct pbrMetallicRoughness_schema : public vsg::JSONParser::Schema
+        struct PbrMetallicRoughness : public vsg::JSONParser::Schema
         {
             vsg::ValuesSchema<double> baseColorFactor; // default { 1.0, 1.0, 1.0, 1.0 }
-            textureInfo_schema baseColorTexture;
+            TextureInfo baseColorTexture;
             double metallicFactor = 1.0;
             double roughnessFactor = 1.0;
-            textureInfo_schema metallicRoughnessTexture;
+            TextureInfo metallicRoughnessTexture;
 
             void read_array(vsg::JSONParser& parser, const std::string_view& property) override;
             void read_object(vsg::JSONParser& parser, const std::string_view& property) override;
             void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
         };
 
-        struct normalTextureInfo_schema : public textureInfo_schema
+        struct NormalTextureInfo : public TextureInfo
         {
             double scale = 1.0;
 
             void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
         };
 
-        struct occlusionTextureInfo_schema : public textureInfo_schema
+        struct OcclusionTextureInfo : public TextureInfo
         {
             double strength = 1.0;
 
             void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
         };
 
-        struct material_schema : public vsg::JSONParser::Schema
+        struct Material : public vsg::JSONParser::Schema
         {
             std::string name;
-            pbrMetallicRoughness_schema pbrMetallicRoughness;
-            normalTextureInfo_schema normalTexture;
-            occlusionTextureInfo_schema occlusionTexture;
-            textureInfo_schema emissiveTexture;
+            PbrMetallicRoughness pbrMetallicRoughness;
+            NormalTextureInfo normalTexture;
+            OcclusionTextureInfo occlusionTexture;
+            TextureInfo emissiveTexture;
             vsg::ValuesSchema<double> emissiveFactor; // default { 0.0, 0.0, 0.0 }
             std::string alphaMode = "OPAQUE";
             double alphaCutoff = 0.5;
@@ -239,23 +239,23 @@ namespace vsgXchange
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         //
-        // mesh_schema
+        // Mesh
         //
-        struct attributes_schema : public vsg::JSONParser::Schema
+        struct Attributes : public vsg::JSONParser::Schema
         {
             std::map<std::string, uint32_t> values;
 
             void read_number(vsg::JSONParser&, const std::string_view& property, std::istream& input) override;
         };
 
-        struct primitive_schema : public vsg::JSONParser::Schema
+        struct Primitive : public vsg::JSONParser::Schema
         {
             vsg::JSONtoMetaDataSchema extras;
-            attributes_schema attributes;
+            Attributes attributes;
             glTFid indices;
             glTFid material;
             uint32_t mode = 0;
-            vsg::ObjectsSchema<attributes_schema> targets;
+            vsg::ObjectsSchema<Attributes> targets;
 
             void report();
             void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
@@ -263,11 +263,11 @@ namespace vsgXchange
             void read_object(vsg::JSONParser& parser, const std::string_view& property) override;
         };
 
-        struct mesh_schema : public vsg::JSONParser::Schema
+        struct Mesh : public vsg::JSONParser::Schema
         {
             std::string name;
             vsg::JSONtoMetaDataSchema extras;
-            vsg::ObjectsSchema<primitive_schema> primitives;
+            vsg::ObjectsSchema<Primitive> primitives;
             vsg::ValuesSchema<double> weights;
 
             // extensions
@@ -281,9 +281,9 @@ namespace vsgXchange
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         //
-        // node_schema
+        // Node
         //
-        struct node_schema : public vsg::JSONParser::Schema
+        struct Node : public vsg::JSONParser::Schema
         {
             std::string name;
 
@@ -308,9 +308,9 @@ namespace vsgXchange
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         //
-        // sampler_schema
+        // Sampler
         //
-        struct sampler_schema : public vsg::JSONParser::Schema
+        struct Sampler : public vsg::JSONParser::Schema
         {
             std::string name;
             uint32_t minFilter = 0;
@@ -329,9 +329,9 @@ namespace vsgXchange
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         //
-        // scene_schema
+        // Scene
         //
-        struct scene_schema : public vsg::JSONParser::Schema
+        struct Scene : public vsg::JSONParser::Schema
         {
             std::string name;
             vsg::ValuesSchema<glTFid> nodes;
@@ -344,9 +344,9 @@ namespace vsgXchange
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         //
-        // texture_schema
+        // Texture
         //
-        struct texture_schema : public vsg::JSONParser::Schema
+        struct Texture : public vsg::JSONParser::Schema
         {
             std::string name;
             glTFid sampler;
@@ -360,24 +360,24 @@ namespace vsgXchange
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////
         //
-        // glTF_schema
+        // glTF
         //
-        struct glTF_schema : public vsg::JSONParser::Schema
+        struct glTF : public vsg::JSONParser::Schema
         {
             vsg::ValuesSchema<std::string> extensionsUsed;
             vsg::ValuesSchema<std::string> extensionsRequired;
-            asset_scheme asset;
-            vsg::ObjectsSchema<accessor_schema> accessors;
-            vsg::ObjectsSchema<bufferView_schema> bufferViews;
-            vsg::ObjectsSchema<buffer_schema> buffers;
-            vsg::ObjectsSchema<image_schema> images;
-            vsg::ObjectsSchema<material_schema> materials;
-            vsg::ObjectsSchema<mesh_schema> meshes;
-            vsg::ObjectsSchema<node_schema> nodes;
-            vsg::ObjectsSchema<sampler_schema> samplers;
+            Asset asset;
+            vsg::ObjectsSchema<Acessor> accessors;
+            vsg::ObjectsSchema<BufferView> bufferViews;
+            vsg::ObjectsSchema<Buffer> buffers;
+            vsg::ObjectsSchema<Image> images;
+            vsg::ObjectsSchema<Material> materials;
+            vsg::ObjectsSchema<Mesh> meshes;
+            vsg::ObjectsSchema<Node> nodes;
+            vsg::ObjectsSchema<Sampler> samplers;
             glTFid scene;
-            vsg::ObjectsSchema<scene_schema> scenes;
-            vsg::ObjectsSchema<texture_schema> textures;
+            vsg::ObjectsSchema<Scene> scenes;
+            vsg::ObjectsSchema<Texture> textures;
 
             void read_array(vsg::JSONParser& parser, const std::string_view& property) override;
             void read_object(vsg::JSONParser& parser, const std::string_view& property) override;
