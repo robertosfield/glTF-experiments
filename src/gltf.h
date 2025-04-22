@@ -39,7 +39,7 @@ namespace vsgXchange
         vsg::ref_ptr<vsg::Object> read(std::istream&, vsg::ref_ptr<const vsg::Options>) const override;
         vsg::ref_ptr<vsg::Object> read(const uint8_t* ptr, size_t size, vsg::ref_ptr<const vsg::Options> options = {}) const override;
 
-        vsg::ref_ptr<vsg::Object> _read(std::istream&, vsg::ref_ptr<const vsg::Options>) const;
+        vsg::ref_ptr<vsg::Object> _read(std::istream&, vsg::ref_ptr<const vsg::Options>, const vsg::Path& filename = {}) const;
 
         vsg::Logger::Level level = vsg::Logger::LOGGER_WARN;
 

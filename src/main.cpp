@@ -55,7 +55,6 @@ int main(int argc, char** argv)
 
     if (group->children.empty())
     {
-        std::cout<<"No scene loaded, please specify valid 3d model(s) on command line."<<std::endl;
         return 1;
     }
 

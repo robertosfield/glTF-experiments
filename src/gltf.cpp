@@ -673,7 +673,7 @@ bool gltf::supportedExtension(const vsg::Path& ext) const
     return ext == ".gltf" || ext == ".glb";
 }
 
-vsg::ref_ptr<vsg::Object> gltf::_read(std::istream& fin, vsg::ref_ptr<const vsg::Options> options) const
+vsg::ref_ptr<vsg::Object> gltf::_read(std::istream& fin, vsg::ref_ptr<const vsg::Options> options, const vsg::Path& filename) const
 {
     fin.seekg(0, fin.end);
     size_t fileSize = fin.tellg();
@@ -702,7 +702,11 @@ vsg::ref_ptr<vsg::Object> gltf::_read(std::istream& fin, vsg::ref_ptr<const vsg:
 
     if (parser.buffer[parser.pos]=='{')
     {
+        parser.warningCount = 0;
         parser.read_object(schema);
+
+        if (parser.warningCount != 0) vsg::info("Failure : ", filename);
+        else vsg::info("Success : ", filename);
 
         if (vsg::value<bool>(false, gltf::report, options))
         {
@@ -730,7 +734,7 @@ vsg::ref_ptr<vsg::Object> gltf::read(const vsg::Path& filename, vsg::ref_ptr<con
     auto& buffer = contents->value();
 
     std::ifstream fin(filenameToUse, std::ios::ate | std::ios::binary);
-    return _read(fin, options);
+    return _read(fin, options, filename);
 }
 
 vsg::ref_ptr<vsg::Object> gltf::read(std::istream& fin, vsg::ref_ptr<const vsg::Options> options) const
