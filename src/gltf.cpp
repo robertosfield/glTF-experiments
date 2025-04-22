@@ -45,19 +45,17 @@ void gltf::Extensions::read_object(vsg::JSONParser& parser, const std::string_vi
     auto schema = parser.getRefObject<vsg::JSONParser::Schema>(str_property);
     if (schema)
     {
-        auto extension = vsg::clone(schema);
-        if (extension)
+        if (auto extension = vsg::clone(schema))
         {
             parser.read_object(*extension);
             values[str_property] = extension;
+            return;
         }
     }
-    else
-    {
-        auto extension = JSONtoMetaDataSchema::create();
-        parser.read_object(*extension);
-        values[str_property] = extension;
-    }
+
+    auto extensionAsMetaData = JSONtoMetaDataSchema::create();
+    parser.read_object(*extensionAsMetaData);
+    values[str_property] = extensionAsMetaData;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -166,7 +164,7 @@ void gltf::Sparse::read_object(vsg::JSONParser& parser, const std::string_view& 
         if (!values) values = SparseValues::create();
         parser.read_object(*values);
     }
-    else parser.warning();
+    else NameExtensionsExtras::read_object(parser, property);
 }
 
 void gltf::Accessor::report()
@@ -220,7 +218,7 @@ void gltf::Accessor::read_object(vsg::JSONParser& parser, const std::string_view
         if (!sparse) sparse = Sparse::create();
         parser.read_object(*sparse);
     }
-    else parser.warning();
+    else NameExtensionsExtras::read_object(parser, property);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -728,7 +726,7 @@ void gltf::Camera::read_object(vsg::JSONParser& parser, const std::string_view& 
         if (!perspective) perspective = Perspective::create();
         parser.read_object(*perspective);
     }
-    else parser.warning();
+    else NameExtensionsExtras::read_object(parser, property);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
