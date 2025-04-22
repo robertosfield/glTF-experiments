@@ -35,6 +35,8 @@ int main(int argc, char** argv)
 
     options->add(gltf);
 
+    arguments.read(options);
+
     auto outputFilename = arguments.value<vsg::Path>("", "-o");
 
     auto group = vsg::Objects::create();

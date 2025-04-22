@@ -17,6 +17,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <vsg/io/Path.h>
 #include <vsg/io/mem_stream.h>
 #include <vsg/io/write.h>
+#include <vsg/utils/CommandLine.h>
 
 #include <fstream>
 
@@ -702,7 +703,11 @@ vsg::ref_ptr<vsg::Object> gltf::_read(std::istream& fin, vsg::ref_ptr<const vsg:
     if (parser.buffer[parser.pos]=='{')
     {
         parser.read_object(schema);
-        schema.report();
+
+        if (vsg::value<bool>(false, gltf::report, options))
+        {
+            schema.report();
+        }
     }
     else
     {
@@ -745,6 +750,12 @@ vsg::ref_ptr<vsg::Object> gltf::read(const uint8_t* ptr, size_t size, vsg::ref_p
     return _read(fin, options);
 }
 
+
+bool gltf::readOptions(vsg::Options& options, vsg::CommandLine& arguments) const
+{
+    bool result = arguments.readAndAssign<bool>(gltf::report, &options);
+    return result;
+}
 
 bool gltf::getFeatures(Features& features) const
 {

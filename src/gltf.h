@@ -47,6 +47,10 @@ namespace vsgXchange
 
         bool getFeatures(Features& features) const override;
 
+        static constexpr const char* report = "report";
+
+        bool readOptions(vsg::Options& options, vsg::CommandLine& arguments) const override;
+
     public:
 
         struct glTFid
