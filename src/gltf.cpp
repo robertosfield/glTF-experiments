@@ -277,16 +277,15 @@ void gltf::Buffer::report()
 {
     vsg::info("Buffer { ");
     NameExtensionsExtras::report();
-    vsg::info("    uri: ", uri);
+    vsg::info("    uri: ", uri, " object: ", object);
     vsg::info("    byteLength: ", byteLength);
     vsg::info("} ");
 }
 
 void gltf::Buffer::read_string(vsg::JSONParser& parser, const std::string_view& property)
 {
-    if (property=="uri" && parser.read_string(uri)) {}
+    if (property=="uri") { parser.read_uri(uri, object); }
     else NameExtensionsExtras::read_string(parser, property);
-
 }
 
 void gltf::Buffer::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
@@ -303,7 +302,7 @@ void gltf::Image::report()
 {
     vsg::info("Image { ");
     NameExtensionsExtras::report();
-    vsg::info("    uri: ", uri);
+    vsg::info("    uri: ", uri, " object: ", object);
     vsg::info("    mimeType: ", mimeType);
     vsg::info("    bufferView: ", bufferView);
     vsg::info("} ");
@@ -311,8 +310,8 @@ void gltf::Image::report()
 
 void gltf::Image::read_string(vsg::JSONParser& parser, const std::string_view& property)
 {
-    if (property=="uri" && parser.read_string(uri)) {}
-    else if (property=="mimeType" && parser.read_string(mimeType)) {}
+    if (property=="uri") { parser.read_uri(uri, object); }
+    else if (property=="mimeType") parser.read_string(mimeType);
     else NameExtensionsExtras::read_string(parser, property);
 }
 
@@ -428,7 +427,7 @@ void gltf::Material::read_object(vsg::JSONParser& parser, const std::string_view
 
 void gltf::Material::read_string(vsg::JSONParser& parser, const std::string_view& property)
 {
-    if (property=="alphaMode" && parser.read_string(alphaMode)) {}
+    if (property=="alphaMode") parser.read_string(alphaMode);
     else NameExtensionsExtras::read_string(parser, property);
 }
 
@@ -838,15 +837,13 @@ vsg::ref_ptr<vsg::Object> gltf::_read(std::istream& fin, vsg::ref_ptr<const vsg:
 
     vsg::JSONParser parser;
     parser.level =  level;
+    parser.options = options;
 
-
+    // set up the supported extensions
     parser.setObject("KHR_materials_specular", KHR_materials_specular::create());
     parser.setObject("KHR_materials_ior", KHR_materials_ior::create());
 
-    glTF schema;
-
     parser.buffer.resize(fileSize);
-
     fin.seekg(0);
     fin.read(reinterpret_cast<char*>(parser.buffer.data()), fileSize);
 
@@ -858,6 +855,8 @@ vsg::ref_ptr<vsg::Object> gltf::_read(std::istream& fin, vsg::ref_ptr<const vsg:
 
     if (parser.buffer[parser.pos]=='{')
     {
+        glTF schema;
+
         parser.warningCount = 0;
         parser.read_object(schema);
 

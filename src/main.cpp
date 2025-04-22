@@ -2,11 +2,13 @@
 
 #ifdef vsgXchange_FOUND
 #include <vsgXchange/all.h>
+#include <vsgXchange/images.h>
 #endif
 
 #include <iostream>
 
 #include "gltf.h"
+#include "bin.h"
 
 int main(int argc, char** argv)
 {
@@ -34,6 +36,8 @@ int main(int argc, char** argv)
     if (int log_level = 0; arguments.read("--log-level", log_level)) gltf->level = vsg::Logger::Level(log_level);
 
     options->add(gltf);
+    options->add(vsgXchange::bin::create());
+    options->add(vsgXchange::images::create());
 
     arguments.read(options);
 
