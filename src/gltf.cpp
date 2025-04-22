@@ -594,6 +594,67 @@ void gltf::Animation::read_array(vsg::JSONParser& parser, const std::string_view
     else parser.warning();
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Camera
+//
+void gltf::Orthographic::report()
+{
+    vsg::info("    Orthographic = { xmag = ", xmag, ", ymag = ", ymag, ", znear = ", znear, ", zfar = ", zfar, " }");
+}
+
+void gltf::Orthographic::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+{
+    if (property=="xmag") input >> xmag;
+    else if (property=="ymag") input >> ymag;
+    else if (property=="znear") input >> znear;
+    else if (property=="zfar") input >> zfar;
+    else parser.warning();
+}
+
+void gltf::Perspective::report()
+{
+    vsg::info("    Perspective = { aspectRatio = ", aspectRatio, ", yfov = ", yfov, ", znear = ", znear, ", zfar = ", zfar, " }");
+}
+
+void gltf::Perspective::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+{
+    if (property=="aspectRatio") input >> aspectRatio;
+    else if (property=="yfov") input >> yfov;
+    else if (property=="znear") input >> znear;
+    else if (property=="zfar") input >> zfar;
+    else parser.warning();
+}
+
+void gltf::Camera::report()
+{
+    vsg::info("Camera {");
+    vsg::info("    type =  ", type);
+    if (perspective) perspective->report();
+    if (orthographic) orthographic->report();
+    vsg::info("}");
+}
+
+void gltf::Camera::read_string(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property=="type") parser.read_string(type);
+    else NameExtensionsExtras::read_string(parser, property);
+}
+
+void gltf::Camera::read_object(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property=="orthographic")
+    {
+        if (!orthographic) orthographic = Orthographic::create();
+        parser.read_object(*orthographic);
+    }
+    else if (property=="perspective")
+    {
+        if (!perspective) perspective = Perspective::create();
+        parser.read_object(*perspective);
+    }
+    else parser.warning();
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -615,6 +676,7 @@ void gltf::glTF::report()
     scenes.report();
     textures.report();
     animations.report();
+    cameras.report();
     vsg::info("}\n");
 }
 
@@ -626,10 +688,7 @@ void gltf::glTF::read_array(vsg::JSONParser& parser, const std::string_view& pro
     else if (property == "animations") parser.read_array(animations);
     else if (property == "buffers") parser.read_array(buffers);
     else if (property == "bufferViews") parser.read_array(bufferViews);
-    else if (property == "cameras")
-    {
-        vsg::info("cameras schema required (",property,") ");
-    }
+    else if (property == "cameras")  parser.read_array(cameras);
     else if (property == "materials") parser.read_array(materials);
     else if (property == "meshes") parser.read_array(meshes);
     else if (property == "nodes") parser.read_array(nodes);

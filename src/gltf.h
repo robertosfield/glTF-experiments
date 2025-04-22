@@ -353,6 +353,39 @@ namespace vsgXchange
             void read_array(vsg::JSONParser& parser, const std::string_view& property) override;
         };
 
+        struct Orthographic : public vsg::Inherit<ExtensionsExtras, Orthographic>
+        {
+            double xmag = 0.0;
+            double ymag = 0.0;
+            double znear = 0.0;
+            double zfar = 0.0;
+
+            void report();
+            void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
+        };
+
+        struct Perspective : public vsg::Inherit<ExtensionsExtras, Perspective>
+        {
+            double aspectRatio = 0.0;
+            double yfov = 0.0;
+            double znear = 0.0;
+            double zfar = 0.0;
+
+            void report();
+            void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
+        };
+
+        struct Camera : public vsg::Inherit<NameExtensionsExtras, Camera>
+        {
+            vsg::ref_ptr<Orthographic> orthographic;
+            vsg::ref_ptr<Perspective> perspective;
+            std::string type;
+
+            void report();
+            void read_string(vsg::JSONParser& parser, const std::string_view& property) override;
+            void read_object(vsg::JSONParser& parser, const std::string_view& property) override;
+        };
+
         struct glTF : public vsg::Inherit<ExtensionsExtras, glTF>
         {
             vsg::ValuesSchema<std::string> extensionsUsed;
@@ -370,6 +403,7 @@ namespace vsgXchange
             vsg::ObjectsSchema<Scene> scenes;
             vsg::ObjectsSchema<Texture> textures;
             vsg::ObjectsSchema<Animation> animations;
+            vsg::ObjectsSchema<Camera> cameras;
 
             void read_array(vsg::JSONParser& parser, const std::string_view& property) override;
             void read_object(vsg::JSONParser& parser, const std::string_view& property) override;
