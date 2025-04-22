@@ -29,6 +29,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace vsgXchange
 {
 
+    // TODO: need to add exports for Windows.
+
     /// gltf ReaderWriter
     class gltf : public vsg::Inherit<vsg::ReaderWriter, gltf>
     {
@@ -95,10 +97,38 @@ namespace vsgXchange
             void read_string(vsg::JSONParser& parser, const std::string_view& property) override;
         };
 
+        struct SparseIndices : public vsg::Inherit<NameExtensionsExtras, SparseIndices>
+        {
+            glTFid bufferView;
+            uint32_t byteOffset = 0;
+            uint32_t componentType = 0;
+
+            void report();
+            void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
+        };
+
+        struct SparseValues : public vsg::Inherit<NameExtensionsExtras, SparseValues>
+        {
+            glTFid bufferView;
+            uint32_t byteOffset = 0;
+
+            void report();
+            void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
+        };
+
+        struct Sparse : public vsg::Inherit<NameExtensionsExtras, Sparse>
+        {
+            uint32_t count = 0;
+            vsg::ref_ptr<SparseIndices> indices;
+            vsg::ref_ptr<SparseValues> values;
+
+            void report();
+            void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
+            void read_object(vsg::JSONParser& parser, const std::string_view& property) override;
+        };
+
         struct Accessor : public vsg::Inherit<NameExtensionsExtras, Accessor>
         {
-            std::string name;
-            vsg::ref_ptr<Extras> extras;
             glTFid bufferView;
             uint32_t byteOffset = 0;
             uint32_t componentType = 0;
@@ -107,15 +137,14 @@ namespace vsgXchange
             std::string type;
             vsg::ValuesSchema<double> max;
             vsg::ValuesSchema<double> min;
-
-            // sparse
+            vsg::ref_ptr<Sparse> sparse;
 
             void report();
             void read_array(vsg::JSONParser& parser, const std::string_view& property) override;
             void read_string(vsg::JSONParser& parser, const std::string_view& property) override;
             void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
             void read_bool(vsg::JSONParser& parser, const std::string_view& property, bool value) override;
-
+            void read_object(vsg::JSONParser& parser, const std::string_view& property) override;
         };
 
         struct Asset : public vsg::Inherit<ExtensionsExtras, Asset>

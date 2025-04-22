@@ -105,6 +105,70 @@ void gltf::NameExtensionsExtras::report()
 //
 // Accessor
 //
+
+void gltf::SparseIndices::report()
+{
+    vsg::info("        indices { ");
+    vsg::info("            bufferView: ", bufferView);
+    vsg::info("            byteOffset: ", byteOffset);
+    vsg::info("            componentType: ", componentType);
+    vsg::info("        }");
+}
+
+void gltf::SparseIndices::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+{
+    if (property=="bufferView") input >> bufferView;
+    else if (property=="byteOffset") input >> byteOffset;
+    else if (property=="componentType") input >> componentType;
+    else parser.warning();
+}
+
+void gltf::SparseValues::report()
+{
+    vsg::info("        values { ");
+    vsg::info("            bufferView: ", bufferView);
+    vsg::info("            byteOffset: ", byteOffset);
+    vsg::info("        }");
+}
+
+void gltf::SparseValues::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+{
+    if (property=="bufferView") input >> bufferView;
+    else if (property=="byteOffset") input >> byteOffset;
+    else parser.warning();
+}
+
+void gltf::Sparse::report()
+{
+    vsg::info("    sparse { ");
+    NameExtensionsExtras::report();
+    vsg::info("        count = ", count);
+    if (indices) indices->report();
+    if (values) values->report();
+    vsg::info("    } ");
+}
+
+void gltf::Sparse::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+{
+    if (property=="count") input >> count;
+    else parser.warning();
+}
+
+void gltf::Sparse::read_object(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property=="indices")
+    {
+        if (!indices) indices = SparseIndices::create();
+        parser.read_object(*indices);
+    }
+    else if (property=="values")
+    {
+        if (!values) values = SparseValues::create();
+        parser.read_object(*values);
+    }
+    else parser.warning();
+}
+
 void gltf::Accessor::report()
 {
     vsg::info("Accessor { ");
@@ -117,6 +181,7 @@ void gltf::Accessor::report()
     vsg::info("    type: ", type);
     for(auto& value : max.values) { vsg::info("    max : ", value); }
     for(auto& value : min.values) { vsg::info("    min : ", value); }
+    if (sparse) sparse->report();
     vsg::info("} ");
 }
 
@@ -145,6 +210,16 @@ void gltf::Accessor::read_number(vsg::JSONParser& parser, const std::string_view
 void gltf::Accessor::read_bool(vsg::JSONParser& parser, const std::string_view& property, bool value)
 {
     if (property=="normalized") normalized = value;
+    else parser.warning();
+}
+
+void gltf::Accessor::read_object(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property=="sparse")
+    {
+        if (!sparse) sparse = Sparse::create();
+        parser.read_object(*sparse);
+    }
     else parser.warning();
 }
 
