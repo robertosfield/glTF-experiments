@@ -885,11 +885,14 @@ vsg::ref_ptr<vsg::Object> gltf::read(const vsg::Path& filename, vsg::ref_ptr<con
     vsg::Path filenameToUse = vsg::findFile(filename, options);
     if (!filenameToUse) return {};
 
+    auto opt = vsg::clone(options);
+    opt->paths.insert(opt->paths.begin(), vsg::filePath(filenameToUse));
+
     vsg::ref_ptr<vsg::stringValue> contents = vsg::stringValue::create();
     auto& buffer = contents->value();
 
     std::ifstream fin(filenameToUse, std::ios::ate | std::ios::binary);
-    return _read(fin, options, filename);
+    return _read(fin, opt, filename);
 }
 
 vsg::ref_ptr<vsg::Object> gltf::read(std::istream& fin, vsg::ref_ptr<const vsg::Options> options) const
