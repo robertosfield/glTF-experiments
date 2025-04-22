@@ -386,6 +386,17 @@ namespace vsgXchange
             void read_object(vsg::JSONParser& parser, const std::string_view& property) override;
         };
 
+        struct Skins : public vsg::Inherit<NameExtensionsExtras, Skins>
+        {
+            glTFid inverseBindMatrices;
+            glTFid skeleton;
+            vsg::ValuesSchema<glTFid> joints;
+
+            void report();
+            void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
+            void read_array(vsg::JSONParser& parser, const std::string_view& property) override;
+        };
+
         struct glTF : public vsg::Inherit<ExtensionsExtras, glTF>
         {
             vsg::ValuesSchema<std::string> extensionsUsed;
@@ -404,6 +415,7 @@ namespace vsgXchange
             vsg::ObjectsSchema<Texture> textures;
             vsg::ObjectsSchema<Animation> animations;
             vsg::ObjectsSchema<Camera> cameras;
+            vsg::ObjectsSchema<Skins> skins;
 
             void read_array(vsg::JSONParser& parser, const std::string_view& property) override;
             void read_object(vsg::JSONParser& parser, const std::string_view& property) override;

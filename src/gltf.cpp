@@ -658,6 +658,32 @@ void gltf::Camera::read_object(vsg::JSONParser& parser, const std::string_view& 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
+// Skins
+//
+void gltf::Skins::report()
+{
+    vsg::info("Skins {");
+    vsg::info("    inverseBindMatrices = ", inverseBindMatrices);
+    vsg::info("    skeleton = ", skeleton);
+    vsg::info("    joints = ", joints.values.size());
+    vsg::info("}");
+}
+
+void gltf::Skins::read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input)
+{
+    if (property=="inverseBindMatrices") input >> inverseBindMatrices;
+    else if (property=="skeleton") input >> skeleton;
+    else parser.warning();
+}
+
+void gltf::Skins::read_array(vsg::JSONParser& parser, const std::string_view& property)
+{
+    if (property == "joints") parser.read_array(joints);
+    else parser.warning();
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//
 // glTF
 //
 void gltf::glTF::report()
@@ -677,6 +703,7 @@ void gltf::glTF::report()
     textures.report();
     animations.report();
     cameras.report();
+    skins.report();
     vsg::info("}\n");
 }
 
@@ -693,11 +720,8 @@ void gltf::glTF::read_array(vsg::JSONParser& parser, const std::string_view& pro
     else if (property == "meshes") parser.read_array(meshes);
     else if (property == "nodes") parser.read_array(nodes);
     else if (property == "samplers") parser.read_array(samplers);
-    else if (property == "scenes") { parser.read_array(scenes); }
-    else if (property == "skins")
-    {
-        vsg::info("skins schema required (",property,") ");
-    }
+    else if (property == "scenes") parser.read_array(scenes);
+    else if (property == "skins") parser.read_array(skins);
     else if (property == "images") parser.read_array(images);
     else if (property == "textures") parser.read_array(textures);
     else parser.warning();
