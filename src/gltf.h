@@ -172,7 +172,7 @@ namespace vsgXchange
 
         struct Buffer : public vsg::Inherit<NameExtensionsExtras, Buffer>
         {
-            std::string uri;
+            std::string_view uri;
             uint32_t byteLength = 0;
 
             // loaded from uri
@@ -185,7 +185,7 @@ namespace vsgXchange
 
         struct Image : public vsg::Inherit<NameExtensionsExtras, Image>
         {
-            std::string uri;
+            std::string_view uri;
             std::string mimeType;
             glTFid bufferView;
 

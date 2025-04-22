@@ -284,7 +284,8 @@ void gltf::Buffer::report()
 
 void gltf::Buffer::read_string(vsg::JSONParser& parser, const std::string_view& property)
 {
-    if (property=="uri") { parser.read_uri(uri, object); }
+    //if (property=="uri") { parser.read_uri(uri, object); }
+    if (property=="uri") { parser.read_string_view(uri); }
     else NameExtensionsExtras::read_string(parser, property);
 }
 
@@ -310,7 +311,8 @@ void gltf::Image::report()
 
 void gltf::Image::read_string(vsg::JSONParser& parser, const std::string_view& property)
 {
-    if (property=="uri") { parser.read_uri(uri, object); }
+    //if (property=="uri") { parser.read_uri(uri, object); }
+    if (property=="uri") { parser.read_string_view(uri); }
     else if (property=="mimeType") parser.read_string(mimeType);
     else NameExtensionsExtras::read_string(parser, property);
 }
