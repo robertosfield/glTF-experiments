@@ -16,6 +16,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 #include <vsg/io/Path.h>
 #include <vsg/io/mem_stream.h>
+#include <vsg/io/read.h>
 #include <vsg/io/write.h>
 #include <vsg/threading/OperationThreads.h>
 #include <vsg/utils/CommandLine.h>
@@ -832,7 +833,7 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
         auto semicolon = uri.find(';', 6);
         auto comma = uri.find(',', semicolon+1);
 
-        memeType = std::string_view(&uri[6], semicolon-6);
+        memeType = std::string_view(&uri[5], semicolon-5);
         encoding = std::string_view(&uri[semicolon+1], comma - semicolon-1);
         value = std::string_view(&uri[comma+1], uri.size() - comma -1);
 
@@ -841,22 +842,72 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
         return true;
     };
 
+    struct OperationWithLatch : public vsg::Inherit<vsg::Operation, OperationWithLatch>
+    {
+        vsg::ref_ptr<vsg::Latch> latch;
 
-    std::string_view memeType;
-    std::string_view encoding;
-    std::string_view value;
+        OperationWithLatch(vsg::ref_ptr<vsg::Latch> l) : latch(l) {}
+    };
+
+    struct ReadOperation : public vsg::Inherit<OperationWithLatch, ReadOperation>
+    {
+        std::string_view filename;
+        vsg::ref_ptr<const vsg::Options> options;
+        vsg::ref_ptr<vsg::Data>& data;
+
+        ReadOperation(const std::string_view& f, vsg::ref_ptr<const vsg::Options> o, vsg::ref_ptr<vsg::Data>& d, vsg::ref_ptr<vsg::Latch> l = {}) :
+            Inherit(l),
+            filename(f),
+            options(o),
+            data(d) {}
+
+        void run() override
+        {
+            data = vsg::read_cast<vsg::Data>(std::string(filename), options);
+
+            vsg::info("Read file ", filename, " data = ", data);
+
+            if (latch) latch->count_down();
+        }
+    };
+
+    struct DecodeOperation : public vsg::Inherit<OperationWithLatch, DecodeOperation>
+    {
+        std::string_view memeType;
+        std::string_view encoding;
+        std::string_view value;
+        vsg::ref_ptr<vsg::Data>& data;
+
+        DecodeOperation(const std::string_view& m, const std::string_view& e, const std::string_view& v, vsg::ref_ptr<vsg::Data>& d, vsg::ref_ptr<vsg::Latch> l = {}) :
+            Inherit(l),
+            memeType(m),
+            encoding(e),
+            value(v),
+            data(d) {}
+
+        void run() override
+        {
+            vsg::info("Need to implemented decoding, memeType = ", memeType, ", encoding = ", encoding);
+            if (latch) latch->count_down();
+        }
+    };
+
+    std::vector<vsg::ref_ptr<OperationWithLatch>> operations;
 
     for(auto& buffer : buffers.values)
     {
         if (!buffer->data && !buffer->uri.empty())
         {
+            std::string_view memeType;
+            std::string_view encoding;
+            std::string_view value;
             if (dataURI(buffer->uri, memeType, encoding, value))
             {
-                vsg::info("Need to decode Buffer ", encoding);
+                operations.push_back(DecodeOperation::create(memeType, encoding, value, buffer->data));
             }
             else
             {
-                vsg::info("Need to load Buffer ", buffer->uri);
+                operations.push_back(ReadOperation::create(buffer->uri, options, buffer->data));
             }
         }
     }
@@ -865,15 +916,45 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
     {
         if (!image->data && !image->uri.empty())
         {
+            std::string_view memeType;
+            std::string_view encoding;
+            std::string_view value;
             if (dataURI(image->uri, memeType, encoding, value))
             {
-                vsg::info("Need to decode Image ", encoding);
+                operations.push_back(DecodeOperation::create(memeType, encoding, value, image->data));
             }
             else
             {
-                vsg::info("Need to load Image ", image->uri);
+                operations.push_back(ReadOperation::create(image->uri, options, image->data));
             }
         }
+    }
+
+    if (operations.size() > 1 && operationThreads)
+    {
+        auto latch = vsg::Latch::create(static_cast<int>(operations.size()));
+        for(auto& operation : operations)
+        {
+            operation->latch = latch;
+
+            operationThreads->add(operation);
+        }
+
+        // use this thread to read the files as well
+        operationThreads->run();
+
+        // wait till all the read operations have completed
+        latch->wait();
+
+        vsg::info("Completed multi-threaded read/decode");
+    }
+    else
+    {
+        for(auto& operation : operations)
+        {
+            operation->run();
+        }
+        vsg::info("Completed single-threaded read/decode");
     }
 }
 
