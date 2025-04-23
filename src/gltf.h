@@ -176,7 +176,7 @@ namespace vsgXchange
             uint32_t byteLength = 0;
 
             // loaded from uri
-            vsg::ref_ptr<vsg::Object> object;
+            vsg::ref_ptr<vsg::Data> data;
 
             void report();
             void read_string(vsg::JSONParser& parser, const std::string_view& property) override;
@@ -190,7 +190,7 @@ namespace vsgXchange
             glTFid bufferView;
 
             // loaded from uri
-            vsg::ref_ptr<vsg::Object> object;
+            vsg::ref_ptr<vsg::Data> data;
 
             void report();
             void read_string(vsg::JSONParser& parser, const std::string_view& property) override;
@@ -457,6 +457,9 @@ namespace vsgXchange
             void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
 
             void report();
+
+            virtual void resolveURIs(vsg::ref_ptr<const vsg::Options> options);
+
         };
 
     public:

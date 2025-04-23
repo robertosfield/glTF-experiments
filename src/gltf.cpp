@@ -17,6 +17,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <vsg/io/Path.h>
 #include <vsg/io/mem_stream.h>
 #include <vsg/io/write.h>
+#include <vsg/threading/OperationThreads.h>
 #include <vsg/utils/CommandLine.h>
 
 #include <fstream>
@@ -277,14 +278,13 @@ void gltf::Buffer::report()
 {
     vsg::info("Buffer { ");
     NameExtensionsExtras::report();
-    vsg::info("    uri: ", uri, " object: ", object);
+    vsg::info("    uri: ", uri, " data: ", data);
     vsg::info("    byteLength: ", byteLength);
     vsg::info("} ");
 }
 
 void gltf::Buffer::read_string(vsg::JSONParser& parser, const std::string_view& property)
 {
-    //if (property=="uri") { parser.read_uri(uri, object); }
     if (property=="uri") { parser.read_string_view(uri); }
     else NameExtensionsExtras::read_string(parser, property);
 }
@@ -303,7 +303,7 @@ void gltf::Image::report()
 {
     vsg::info("Image { ");
     NameExtensionsExtras::report();
-    vsg::info("    uri: ", uri, " object: ", object);
+    vsg::info("    uri: ", uri, " data: ", data);
     vsg::info("    mimeType: ", mimeType);
     vsg::info("    bufferView: ", bufferView);
     vsg::info("} ");
@@ -311,7 +311,6 @@ void gltf::Image::report()
 
 void gltf::Image::read_string(vsg::JSONParser& parser, const std::string_view& property)
 {
-    //if (property=="uri") { parser.read_uri(uri, object); }
     if (property=="uri") { parser.read_string_view(uri); }
     else if (property=="mimeType") parser.read_string(mimeType);
     else NameExtensionsExtras::read_string(parser, property);
@@ -817,6 +816,67 @@ void gltf::glTF::read_number(vsg::JSONParser& parser, const std::string_view& pr
     else parser.warning();
 }
 
+void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
+{
+    vsg::ref_ptr<vsg::OperationThreads> operationThreads;
+    if (options) operationThreads = options->operationThreads;
+
+    vsg::info("operationThreads = ", operationThreads);
+
+    auto dataURI = [](const std::string_view& uri, std::string_view& memeType, std::string_view& encoding, std::string_view& value) -> bool
+    {
+        if (uri.size() <= 5) return false;
+        if (uri.compare(0, 5, "data:") != 0) return false;
+
+
+        auto semicolon = uri.find(';', 6);
+        auto comma = uri.find(',', semicolon+1);
+
+        memeType = std::string_view(&uri[6], semicolon-6);
+        encoding = std::string_view(&uri[semicolon+1], comma - semicolon-1);
+        value = std::string_view(&uri[comma+1], uri.size() - comma -1);
+
+        //vsg::info("We have a data URI : memeType = ", memeType, ", encoding = ", encoding, ", value = ", value);
+
+        return true;
+    };
+
+
+    std::string_view memeType;
+    std::string_view encoding;
+    std::string_view value;
+
+    for(auto& buffer : buffers.values)
+    {
+        if (!buffer->data && !buffer->uri.empty())
+        {
+            if (dataURI(buffer->uri, memeType, encoding, value))
+            {
+                vsg::info("Need to decode Buffer ", encoding);
+            }
+            else
+            {
+                vsg::info("Need to load Buffer ", buffer->uri);
+            }
+        }
+    }
+
+    for(auto& image : images.values)
+    {
+        if (!image->data && !image->uri.empty())
+        {
+            if (dataURI(image->uri, memeType, encoding, value))
+            {
+                vsg::info("Need to decode Image ", encoding);
+            }
+            else
+            {
+                vsg::info("Need to load Image ", image->uri);
+            }
+        }
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // gltf
@@ -861,6 +921,8 @@ vsg::ref_ptr<vsg::Object> gltf::_read(std::istream& fin, vsg::ref_ptr<const vsg:
 
         parser.warningCount = 0;
         parser.read_object(schema);
+
+        schema.resolveURIs(options);
 
         if (parser.warningCount != 0) vsg::info("Failure : ", filename);
         else vsg::info("Success : ", filename);
@@ -929,3 +991,4 @@ bool gltf::getFeatures(Features& features) const
 
     return true;
 }
+

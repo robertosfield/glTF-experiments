@@ -32,6 +32,9 @@ int main(int argc, char** argv)
 
     if (arguments.errors()) return arguments.writeErrorMessages(std::cerr);
 
+    uint32_t numOperationThreads = 0;
+    if (arguments.read("--ot", numOperationThreads)) options->operationThreads = vsg::OperationThreads::create(numOperationThreads);
+
     auto gltf = vsgXchange::gltf::create();
     if (int log_level = 0; arguments.read("--log-level", log_level)) gltf->level = vsg::Logger::Level(log_level);
 
