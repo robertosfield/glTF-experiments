@@ -837,8 +837,6 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
         encoding = std::string_view(&uri[semicolon+1], comma - semicolon-1);
         value = std::string_view(&uri[comma+1], uri.size() - comma -1);
 
-        //vsg::info("We have a data URI : memeType = ", memeType, ", encoding = ", encoding, ", value = ", value);
-
         return true;
     };
 
@@ -876,14 +874,16 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
         std::string_view memeType;
         std::string_view encoding;
         std::string_view value;
+        vsg::ref_ptr<const vsg::Options> options;
         uint32_t byteLength;
         vsg::ref_ptr<vsg::Data>& data;
 
-        DecodeOperation(const std::string_view& m, const std::string_view& e, const std::string_view& v, vsg::ref_ptr<vsg::Data>& d, uint32_t bl, vsg::ref_ptr<vsg::Latch> l = {}) :
+        DecodeOperation(const std::string_view& m, const std::string_view& e, const std::string_view& v, vsg::ref_ptr<const vsg::Options> o, vsg::ref_ptr<vsg::Data>& d, uint32_t bl, vsg::ref_ptr<vsg::Latch> l = {}) :
             Inherit(l),
             memeType(m),
             encoding(e),
             value(v),
+            options(o),
             byteLength(bl),
             data(d) {}
 
@@ -965,7 +965,58 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
                     *dest_itr = 0;
                 }
 
-                data = decodedData;
+                auto readData = [](vsg::ref_ptr<vsg::Data> input,  vsg::ref_ptr<const vsg::Options> opt, const char* extensionHint) -> vsg::ref_ptr<vsg::Data>
+                {
+                    auto local_options = vsg::clone(opt);
+                    local_options->extensionHint = extensionHint;
+
+                    auto data = vsg::read_cast<vsg::Data>(reinterpret_cast<const uint8_t*>(input->dataPointer()), input->dataSize(), local_options);
+
+                    if (data)
+                    {
+                        vsg::info("read decoded data [", input->dataSize(), ", ", extensionHint, "] dimensions = {", data->width(), ", ", data->height(), "}");
+                    }
+                    else
+                    {
+                        vsg::warn("unable to decoded data [", input->dataSize(), ", ", extensionHint, "]");
+                    }
+
+                    return data;
+                };
+
+                if (memeType.compare(0, 6, "image/") == 0)
+                {
+                    if (memeType=="image/png")
+                    {
+                        data = readData(decodedData, options, ".png");
+                    }
+                    else if (memeType=="image/jpeg")
+                    {
+                        data = readData(decodedData, options, ".png");
+                    }
+                    else if (memeType=="image/bpm")
+                    {
+                        data = readData(decodedData, options, ".bpm");
+                    }
+                    else if (memeType=="image/gif")
+                    {
+                        data = readData(decodedData, options, ".gif");
+                    }
+                    else if (memeType=="image/ktx")
+                    {
+                        data = readData(decodedData, options, ".ktx");
+                    }
+                    else
+                    {
+                        vsg::info("Unsupported image data URI : memeType = ", memeType, ", encoding = ", encoding, ", value.size() = ", value.size());
+                    }
+                }
+                else
+                {
+                    vsg::info("We have a data URI : memeType = ", memeType, ", encoding = ", encoding, ", value.size() = ", value.size());
+
+                    data = decodedData;
+                }
             }
             else
             {
@@ -989,7 +1040,7 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
             std::string_view value;
             if (dataURI(buffer->uri, memeType, encoding, value))
             {
-                operations.push_back(DecodeOperation::create(memeType, encoding, value, buffer->data, buffer->byteLength));
+                operations.push_back(DecodeOperation::create(memeType, encoding, value, options, buffer->data, buffer->byteLength));
             }
             else
             {
@@ -1007,7 +1058,7 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
             std::string_view value;
             if (dataURI(image->uri, memeType, encoding, value))
             {
-                operations.push_back(DecodeOperation::create(memeType, encoding, value, image->data, std::numeric_limits<uint32_t>::max()));
+                operations.push_back(DecodeOperation::create(memeType, encoding, value, options, image->data, std::numeric_limits<uint32_t>::max()));
             }
             else
             {
