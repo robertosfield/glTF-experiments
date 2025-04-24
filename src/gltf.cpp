@@ -18,12 +18,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <vsg/io/mem_stream.h>
 #include <vsg/io/read.h>
 #include <vsg/io/write.h>
-#include <vsg/ui/UIEvent.h>
 #include <vsg/threading/OperationThreads.h>
 #include <vsg/utils/CommandLine.h>
 
 #include <fstream>
-#include <algorithm>
 
 using namespace vsgXchange;
 
