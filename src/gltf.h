@@ -308,7 +308,7 @@ namespace vsgXchange
             glTFid camera;
             glTFid skin;
             glTFid mesh;
-            vsg::ValuesSchema<uint32_t> children;
+            vsg::ValuesSchema<glTFid> children;
             vsg::ValuesSchema<double> matrix;
             vsg::ValuesSchema<double> rotation;
             vsg::ValuesSchema<double> scale;
@@ -462,8 +462,13 @@ namespace vsgXchange
 
         };
 
-    public:
+        class SceneGraphBuilder : public vsg::Inherit<vsg::Object, SceneGraphBuilder>
+        {
+        public:
+            SceneGraphBuilder();
 
+            vsg::ref_ptr<vsg::Object> createSceneGraph(vsg::ref_ptr<gltf::glTF> root, vsg::ref_ptr<const vsg::Options> options);
+        };
 
     };
 

@@ -35,6 +35,7 @@ add_custom_target(clobber
 set(SOURCES
     src/bin.cpp
     src/gltf.cpp
+    src/SceneGraphBuilder.cpp
     src/main.cpp
 )
 

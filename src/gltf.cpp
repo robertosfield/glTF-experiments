@@ -26,7 +26,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 using namespace vsgXchange;
 
 
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // Extensions
@@ -1135,20 +1134,23 @@ vsg::ref_ptr<vsg::Object> gltf::_read(std::istream& fin, vsg::ref_ptr<const vsg:
 
     if (parser.buffer[parser.pos]=='{')
     {
-        glTF schema;
+        auto root = gltf::glTF::create();
 
         parser.warningCount = 0;
-        parser.read_object(schema);
+        parser.read_object(*root);
 
-        schema.resolveURIs(options);
+        root->resolveURIs(options);
 
         if (parser.warningCount != 0) vsg::info("Failure : ", filename);
         else vsg::info("Success : ", filename);
 
         if (vsg::value<bool>(false, gltf::report, options))
         {
-            schema.report();
+            root->report();
         }
+
+        auto builder = gltf::SceneGraphBuilder::create();
+        result = builder->createSceneGraph(root, options);
     }
     else
     {
@@ -1209,4 +1211,3 @@ bool gltf::getFeatures(Features& features) const
 
     return true;
 }
-
