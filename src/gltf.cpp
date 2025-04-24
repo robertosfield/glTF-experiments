@@ -18,10 +18,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <vsg/io/mem_stream.h>
 #include <vsg/io/read.h>
 #include <vsg/io/write.h>
+#include <vsg/ui/UIEvent.h>
 #include <vsg/threading/OperationThreads.h>
 #include <vsg/utils/CommandLine.h>
 
 #include <fstream>
+#include <algorithm>
 
 using namespace vsgXchange;
 
@@ -876,18 +878,104 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
         std::string_view memeType;
         std::string_view encoding;
         std::string_view value;
+        uint32_t byteLength;
         vsg::ref_ptr<vsg::Data>& data;
 
-        DecodeOperation(const std::string_view& m, const std::string_view& e, const std::string_view& v, vsg::ref_ptr<vsg::Data>& d, vsg::ref_ptr<vsg::Latch> l = {}) :
+        DecodeOperation(const std::string_view& m, const std::string_view& e, const std::string_view& v, vsg::ref_ptr<vsg::Data>& d, uint32_t bl, vsg::ref_ptr<vsg::Latch> l = {}) :
             Inherit(l),
             memeType(m),
             encoding(e),
             value(v),
+            byteLength(bl),
             data(d) {}
 
         void run() override
         {
-            vsg::info("Need to implemented decoding, memeType = ", memeType, ", encoding = ", encoding);
+            if (encoding == "base64")
+            {
+                auto valid_base64 = [](char c) -> uint8_t
+                {
+                    if (c >= 'A' && c <= 'Z') return true;
+                    if (c >= 'a' && c <= 'z') return true;
+                    if (c >= '0' && c <= '9') return true;
+                    if (c == '+') return true;
+                    if (c == '/') return true;
+                    return false;
+                };
+
+                auto decode_base64 = [](char c) -> uint8_t
+                {
+                    if (c >= 'A' && c <= 'Z') return c - 'A';
+                    if (c >= 'a' && c <= 'z') return c - 'a' + 26;
+                    if (c >= '0' && c <= '9') return c - '0' + 52;
+                    if (c == '+') return 62;
+                    if (c == '/') return 63;
+                    return 0;
+                };
+
+                while(!value.empty() && !valid_base64(value.back()))
+                {
+                    value.remove_suffix(1);
+                }
+
+                size_t decodedSize = (value.size() * 6)/ 8;
+
+                // set up a lookup table to speed up the mapping between encoded to decoded char
+                uint8_t lookup[256];
+                for(uint32_t c = 0; c<256; ++c)
+                {
+                    lookup[c] = decode_base64(c);
+                }
+
+                uint32_t lengthToUse = std::min(byteLength, static_cast<uint32_t>(decodedSize));
+
+                // data to stored the decoded data.
+                auto decodedData = vsg::ubyteArray::create(lengthToUse);
+
+                // process 4 byte source into 3 byte destination
+                auto dest_itr = decodedData->begin();
+                auto src_itr = value.begin();
+
+                size_t count = std::min(value.size() / 4, size_t(lengthToUse) / 3);
+                size_t srcTailCount = value.size() - count * 4;
+                size_t destTailCount = lengthToUse - count * 3;
+                for(; count > 0; --count)
+                {
+                    const uint8_t decodedBytes[4] = { lookup[*(src_itr++)], lookup[*(src_itr++)], lookup[*(src_itr++)], lookup[*(src_itr++)]};
+
+                    (*dest_itr++) = (decodedBytes[0] << 2) + ((decodedBytes[1] & 0x30) >> 4);
+                    (*dest_itr++) = ((decodedBytes[1] & 0x0f) << 4) + ((decodedBytes[2] & 0x3c) >> 2);
+                    (*dest_itr++) = ((decodedBytes[2] & 0x03) << 6) + decodedBytes[3];
+                }
+
+                if (srcTailCount != 0 && destTailCount != 0)
+                {
+                    const uint8_t decodedBytes[4] = {
+                        lookup[*(src_itr++)],
+                        srcTailCount >= 2 ? lookup[*(src_itr++)] : uint8_t(0),
+                        srcTailCount >= 3 ? lookup[*(src_itr++)] : uint8_t(0),
+                        srcTailCount >= 4 ? lookup[*(src_itr++)] : uint8_t(0)};
+
+                    (*dest_itr++) = (decodedBytes[0] << 2) + ((decodedBytes[1] & 0x30) >> 4);
+                    if (destTailCount >= 2) (*dest_itr++) = ((decodedBytes[1] & 0x0f) << 4) + ((decodedBytes[2] & 0x3c) >> 2);
+                    if (destTailCount >= 3) (*dest_itr++) = ((decodedBytes[2] & 0x03) << 6) + decodedBytes[3];
+                }
+
+                // fill in any remaining unassigned bytes to end of decodedData container
+                for(; dest_itr !=  decodedData->end(); ++dest_itr)
+                {
+                    *dest_itr = 0;
+                }
+
+                data = decodedData;
+            }
+            else
+            {
+                vsg::warn("Error: encoding not supported. memeType = ", memeType, ", encoding = ", encoding);
+
+            }
+
+
             if (latch) latch->count_down();
         }
     };
@@ -903,7 +991,7 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
             std::string_view value;
             if (dataURI(buffer->uri, memeType, encoding, value))
             {
-                operations.push_back(DecodeOperation::create(memeType, encoding, value, buffer->data));
+                operations.push_back(DecodeOperation::create(memeType, encoding, value, buffer->data, buffer->byteLength));
             }
             else
             {
@@ -921,7 +1009,7 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
             std::string_view value;
             if (dataURI(image->uri, memeType, encoding, value))
             {
-                operations.push_back(DecodeOperation::create(memeType, encoding, value, image->data));
+                operations.push_back(DecodeOperation::create(memeType, encoding, value, image->data, std::numeric_limits<uint32_t>::max()));
             }
             else
             {
