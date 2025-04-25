@@ -373,8 +373,6 @@ vsg::ref_ptr<vsg::Node> gltf::SceneGraphBuilder::createNode(vsg::ref_ptr<gltf::N
             transform->matrix = vsg::translate(vsg_t) * vsg::rotate(vsg_r) * vsg::scale(vsg_s);
         }
 
-        vsg::info("Created transfrom ", transform, " with numChildren = ", numChildren);
-
         vsg_node = transform;
     }
     else if (numChildren > 1)
@@ -385,8 +383,6 @@ vsg::ref_ptr<vsg::Node> gltf::SceneGraphBuilder::createNode(vsg::ref_ptr<gltf::N
         else if (gltf_node->skin) group->addChild(vsg_skins[gltf_node->skin.value]);
         else if (gltf_node->mesh) group->addChild(vsg_meshes[gltf_node->mesh.value]);
 
-        vsg::info("Created group ", group, " with numChildren = ", numChildren);
-
         vsg_node = group;
     }
     else
@@ -395,8 +391,6 @@ vsg::ref_ptr<vsg::Node> gltf::SceneGraphBuilder::createNode(vsg::ref_ptr<gltf::N
         else if (gltf_node->skin) vsg_node = vsg_skins[gltf_node->skin.value];
         else if (gltf_node->mesh) vsg_node = vsg_meshes[gltf_node->mesh.value];
         else vsg_node = vsg::Group::create(); // TODO: single child so should this just point to the child?
-
-        vsg::info("Created node ", vsg_node, " with numChildren = ", numChildren);
     }
 
     assign_name_extras(*gltf_node, *vsg_node);
@@ -494,11 +488,6 @@ vsg::ref_ptr<vsg::Object> gltf::SceneGraphBuilder::createSceneGraph(vsg::ref_ptr
                 else vsg::info("Unassigned vsg_child");
             }
         }
-    }
-
-    for(auto& vsg_node : vsg_nodes)
-    {
-        vsg::info("vsg_node = ", vsg_node);
     }
 
     vsg::info("scene = ", root->scene);

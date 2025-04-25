@@ -862,8 +862,6 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
         {
             data = vsg::read_cast<vsg::Data>(std::string(filename), options);
 
-            vsg::info("Read file ", filename, " data = ", data);
-
             if (latch) latch->count_down();
         }
     };
