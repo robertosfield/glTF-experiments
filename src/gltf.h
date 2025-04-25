@@ -390,10 +390,10 @@ namespace vsgXchange
 
         struct Orthographic : public vsg::Inherit<ExtensionsExtras, Orthographic>
         {
-            double xmag = 0.0;
-            double ymag = 0.0;
-            double znear = 0.0;
-            double zfar = 0.0;
+            double xmag = 1.0;
+            double ymag = 1.0;
+            double znear = 1.0;
+            double zfar = 1000.0;
 
             void report();
             void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
@@ -401,10 +401,10 @@ namespace vsgXchange
 
         struct Perspective : public vsg::Inherit<ExtensionsExtras, Perspective>
         {
-            double aspectRatio = 0.0;
-            double yfov = 0.0;
-            double znear = 0.0;
-            double zfar = 0.0;
+            double aspectRatio = 1.0;
+            double yfov = 1.0;
+            double znear = 1.0;
+            double zfar = 1000.0;
 
             void report();
             void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;

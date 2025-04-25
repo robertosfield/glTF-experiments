@@ -86,7 +86,25 @@ vsg::ref_ptr<vsg::Object> gltf::SceneGraphBuilder::createSceneGraph(vsg::ref_ptr
         auto& vsg_camera = vsg_cameras[ci];
         vsg_camera = vsg::Camera::create();
 
-        assign_name_extras(*gltf_camera, *vsg_camera);
+        if (gltf_camera->perspective)
+        {
+            auto perspective = gltf_camera->perspective;
+            // note, vsg::Perspective implements GLU Perspective style settings so uses degress for fov, while glTF uses radians so need to convert to degrees
+            vsg_camera->projectionMatrix = vsg::Perspective::create(vsg::degrees(perspective->yfov), perspective->aspectRatio, perspective->znear, perspective->zfar);
+        }
+
+        if (gltf_camera->orthographic)
+        {
+            auto orthographic = gltf_camera->orthographic;
+            double halfWidth = orthographic->xmag; // TODO: figure how to map to GLU/VSG style orthographic
+            double halfHeight = orthographic->ymag; // TODO: figure how to mapto GLU/VSG style orthographic
+            vsg_camera->projectionMatrix = vsg::Orthographic::create(-halfWidth, halfWidth, -halfHeight, halfHeight, orthographic->znear, orthographic->zfar);
+        }
+
+        vsg::info("Assigned camera");
+
+        vsg_camera->name = gltf_camera->name;
+        assign_extras(*gltf_camera, *vsg_camera);
     }
 
     vsg::info("create skins = ", root->skins.values.size());
