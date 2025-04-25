@@ -38,15 +38,24 @@ int main(int argc, char** argv)
     auto gltf = vsgXchange::gltf::create();
     if (int log_level = 0; arguments.read("--log-level", log_level)) gltf->level = vsg::Logger::Level(log_level);
 
-    options->add(gltf);
-    options->add(vsgXchange::bin::create());
-    options->add(vsgXchange::images::create());
+    if (arguments.read("--old"))
+    {
+        options->add(vsgXchange::all::create());
+    }
+    else
+    {
+        options->add(gltf);
+        options->add(vsgXchange::bin::create());
+        options->add(vsgXchange::images::create());
+    }
 
     arguments.read(options);
 
     auto outputFilename = arguments.value<vsg::Path>("", "-o");
 
     auto group = vsg::Objects::create();
+
+    auto before_read = vsg::clock::now();
 
     // read any vsg files from command line arguments
     for (int i=1; i<argc; ++i)
@@ -60,10 +69,15 @@ int main(int argc, char** argv)
         }
     }
 
+
     if (group->children.empty())
     {
         return 1;
     }
+
+    auto after_read = vsg::clock::now();
+    std::cout<<"time to read data "<<std::chrono::duration<double, std::chrono::seconds::period>(after_read - before_read).count()<<std::endl;
+
 
     if (outputFilename)
     {
