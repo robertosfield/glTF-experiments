@@ -28,6 +28,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/nodes/VertexIndexDraw.h>
 #include <vsg/nodes/Switch.h>
 #include <vsg/app/Camera.h>
+#include <vsg/maths/transform.h>
 
 using namespace vsgXchange;
 
@@ -133,6 +134,31 @@ vsg::ref_ptr<vsg::Object> gltf::SceneGraphBuilder::createSceneGraph(vsg::ref_ptr
             if (gltf_node->camera) transform->addChild(vsg_cameras[gltf_node->camera.value]);
             else if (gltf_node->skin) transform->addChild(vsg_skins[gltf_node->skin.value]);
             else if (gltf_node->mesh) transform->addChild(vsg_meshes[gltf_node->mesh.value]);
+
+            if (gltf_node->matrix.values.size()==16)
+            {
+                auto& m = gltf_node->matrix.values;
+                transform->matrix.set(m[0], m[1], m[2], m[3],
+                                      m[4], m[5], m[6], m[7],
+                                      m[8], m[9], m[10], m[11],
+                                      m[12], m[13], m[14], m[15]);
+            }
+            else
+            {
+                auto& t = gltf_node->translation.values;
+                auto& r = gltf_node->rotation.values;
+                auto& s = gltf_node->scale.values;
+
+                vsg::dvec3 vsg_t(0.0, 0.0, 0.0);
+                vsg::dquat vsg_r;
+                vsg::dvec3 vsg_s(1.0, 1.0, 1.0);
+
+                if (t.size()>=3) vsg_t.set(t[0], t[1], t[2]);
+                if (r.size()>=4) vsg_r.set(t[0], r[1], r[2], r[3]);
+                if (s.size()>=3) vsg_s.set(s[0], s[1], s[2]);
+
+                transform->matrix = vsg::translate(vsg_t) * vsg::rotate(vsg_r) * vsg::scale(vsg_s);
+            }
 
             vsg::info("Created transfrom ", transform, " with numChildren = ", numChildren);
 
