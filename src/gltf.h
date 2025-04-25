@@ -285,7 +285,7 @@ namespace vsgXchange
             Attributes attributes;
             glTFid indices;
             glTFid material;
-            uint32_t mode = 0;
+            uint32_t mode = 4;
             vsg::ObjectsSchema<Attributes> targets;
 
             void report();
@@ -467,6 +467,9 @@ namespace vsgXchange
         public:
             SceneGraphBuilder();
 
+            std::vector<vsg::ref_ptr<vsg::Data>> vsg_buffers;
+            std::vector<vsg::ref_ptr<vsg::Data>> vsg_bufferViews;
+            std::vector<vsg::ref_ptr<vsg::Data>> vsg_accessors;
             std::vector<vsg::ref_ptr<vsg::Camera>> vsg_cameras;
             std::vector<vsg::ref_ptr<vsg::Node>> vsg_skins;
             std::vector<vsg::ref_ptr<vsg::Node>> vsg_meshes;
@@ -476,6 +479,9 @@ namespace vsgXchange
             void assign_extras(ExtensionsExtras& src, vsg::Object& dest);
             void assign_name_extras(NameExtensionsExtras& src, vsg::Object& dest);
 
+            vsg::ref_ptr<vsg::Data> createBuffer(vsg::ref_ptr<gltf::Buffer> gltf_buffer);
+            vsg::ref_ptr<vsg::Data> createBufferView(vsg::ref_ptr<gltf::BufferView> gltf_bufferView);
+            vsg::ref_ptr<vsg::Data> createAccessor(vsg::ref_ptr<gltf::Accessor> gltf_accessor);
             vsg::ref_ptr<vsg::Camera> createCamera(vsg::ref_ptr<gltf::Camera> gltf_camera);
             vsg::ref_ptr<vsg::Node> createMesh(vsg::ref_ptr<gltf::Mesh> gltf_mesh);
             vsg::ref_ptr<vsg::Node> createNode(vsg::ref_ptr<gltf::Node> gltf_node);

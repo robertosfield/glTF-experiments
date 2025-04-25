@@ -73,6 +73,108 @@ void gltf::SceneGraphBuilder::assign_name_extras(NameExtensionsExtras& src, vsg:
     }
 };
 
+vsg::ref_ptr<vsg::Data> gltf::SceneGraphBuilder::createBuffer(vsg::ref_ptr<gltf::Buffer> gltf_buffer)
+{
+    vsg::info("Assigning buffer ", gltf_buffer->data);
+    return gltf_buffer->data;
+}
+
+vsg::ref_ptr<vsg::Data> gltf::SceneGraphBuilder::createBufferView(vsg::ref_ptr<gltf::BufferView> gltf_bufferView)
+{
+    if (!gltf_bufferView->buffer)
+    {
+        vsg::info("Warning: no buffer available to create BufferView.");
+        return {};
+    }
+
+    if (!vsg_buffers[gltf_bufferView->buffer.value])
+    {
+        vsg::info("Warning: no vsg::Data available to create BufferView.");
+        return {};
+    }
+
+    // TODO: deciode whether we need to do anything with the BufferView.target
+    auto vsg_buffer =  vsg::ubyteArray::create(vsg_buffers[gltf_bufferView->buffer.value],
+                                                gltf_bufferView->byteOffset,
+                                                gltf_bufferView->byteStride,
+                                                gltf_bufferView->byteLength / gltf_bufferView->byteStride);
+
+    vsg::info("Created BufferView ", vsg_buffer);
+    return vsg_buffer;
+}
+
+vsg::ref_ptr<vsg::Data> gltf::SceneGraphBuilder::createAccessor(vsg::ref_ptr<gltf::Accessor> gltf_accessor)
+{
+    if (!gltf_accessor->bufferView)
+    {
+        vsg::info("Warning: no bufferView available to create Accessor.");
+        return {};
+    }
+
+    if (!vsg_bufferViews[gltf_accessor->bufferView.value])
+    {
+        vsg::info("Warning: no vsg::Data available to create BufferView.");
+        return {};
+    }
+
+    auto bufferView = vsg_bufferViews[gltf_accessor->bufferView.value];
+
+    vsg::ref_ptr<vsg::Data> vsg_data;
+    switch(gltf_accessor->componentType)
+    {
+        case(5120): // BYTE
+            if      (gltf_accessor->type=="SCALAR") vsg_data = vsg::byteArray::create(bufferView, gltf_accessor->byteOffset, 1, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC2")   vsg_data = vsg::bvec2Array::create(bufferView, gltf_accessor->byteOffset, 2, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC3")   vsg_data = vsg::bvec3Array::create(bufferView, gltf_accessor->byteOffset, 3, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC4")   vsg_data = vsg::bvec4Array::create(bufferView, gltf_accessor->byteOffset, 4, gltf_accessor->count);
+            else vsg::warn("Unsupported gltf_accessor->componentType = ", gltf_accessor->componentType);
+            break;
+        case(5121): // UNSIGNED_BYTE
+            if      (gltf_accessor->type=="SCALAR") vsg_data = vsg::ubyteArray::create(bufferView, gltf_accessor->byteOffset, 1, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC2")   vsg_data = vsg::ubvec2Array::create(bufferView, gltf_accessor->byteOffset, 2, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC3")   vsg_data = vsg::ubvec3Array::create(bufferView, gltf_accessor->byteOffset, 3, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC4")   vsg_data = vsg::ubvec4Array::create(bufferView, gltf_accessor->byteOffset, 4, gltf_accessor->count);
+            else vsg::warn("Unsupported gltf_accessor->componentType = ", gltf_accessor->componentType);
+            break;
+        case(5122): // SHORT
+            if      (gltf_accessor->type=="SCALAR") vsg_data = vsg::shortArray::create(bufferView, gltf_accessor->byteOffset, 1, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC2")   vsg_data = vsg::svec2Array::create(bufferView, gltf_accessor->byteOffset, 2, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC3")   vsg_data = vsg::svec3Array::create(bufferView, gltf_accessor->byteOffset, 3, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC4")   vsg_data = vsg::svec4Array::create(bufferView, gltf_accessor->byteOffset, 4, gltf_accessor->count);
+            else vsg::warn("Unsupported gltf_accessor->componentType = ", gltf_accessor->componentType);
+            break;
+        case(5123): // UNSIGNED_SHORT
+            if      (gltf_accessor->type=="SCALAR") vsg_data = vsg::ushortArray::create(bufferView, gltf_accessor->byteOffset, 1, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC2")   vsg_data = vsg::usvec2Array::create(bufferView, gltf_accessor->byteOffset, 2, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC3")   vsg_data = vsg::usvec3Array::create(bufferView, gltf_accessor->byteOffset, 3, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC4")   vsg_data = vsg::usvec4Array::create(bufferView, gltf_accessor->byteOffset, 4, gltf_accessor->count);
+            else vsg::warn("Unsupported gltf_accessor->componentType = ", gltf_accessor->componentType);
+            break;
+        case(5125): // UNSIGNED_INT
+            if      (gltf_accessor->type=="SCALAR") vsg_data = vsg::uintArray::create(bufferView, gltf_accessor->byteOffset, 1, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC2")   vsg_data = vsg::uivec2Array::create(bufferView, gltf_accessor->byteOffset, 2, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC3")   vsg_data = vsg::uivec3Array::create(bufferView, gltf_accessor->byteOffset, 3, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC4")   vsg_data = vsg::uivec4Array::create(bufferView, gltf_accessor->byteOffset, 4, gltf_accessor->count);
+            else vsg::warn("Unsupported gltf_accessor->componentType = ", gltf_accessor->componentType);
+            break;
+        case(5126): // FLOAT
+            if      (gltf_accessor->type=="SCALAR") vsg_data = vsg::byteArray::create(bufferView, gltf_accessor->byteOffset, 1, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC2")   vsg_data = vsg::vec2Array::create(bufferView, gltf_accessor->byteOffset, 2, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC3")   vsg_data = vsg::vec3Array::create(bufferView, gltf_accessor->byteOffset, 3, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC4")   vsg_data = vsg::vec4Array::create(bufferView, gltf_accessor->byteOffset, 4, gltf_accessor->count);
+            //else if (gltf_accessor->type=="MAT2")   vsg_data = vsg::mat2Array::create(bufferView, gltf_accessor->byteOffset, 4, gltf_accessor->count);
+            //else if (gltf_accessor->type=="MAT3")   vsg_data = vsg::mat3Array::create(bufferView, gltf_accessor->byteOffset, 4, gltf_accessor->count);
+            else if (gltf_accessor->type=="MAT4")   vsg_data = vsg::mat4Array::create(bufferView, gltf_accessor->byteOffset, 4, gltf_accessor->count);
+            else vsg::warn("Unsupported gltf_accessor->componentType = ", gltf_accessor->componentType);
+            break;
+    }
+
+    vsg::info("created vsg_Accessor ", vsg_data, ", gltf_accessor->count = ", gltf_accessor->count);
+
+    return vsg_data;
+}
+
+
 vsg::ref_ptr<vsg::Camera> gltf::SceneGraphBuilder::createCamera(vsg::ref_ptr<gltf::Camera> gltf_camera)
 {
     auto vsg_camera = vsg::Camera::create();
@@ -102,7 +204,99 @@ vsg::ref_ptr<vsg::Camera> gltf::SceneGraphBuilder::createCamera(vsg::ref_ptr<glt
 
 vsg::ref_ptr<vsg::Node> gltf::SceneGraphBuilder::createMesh(vsg::ref_ptr<gltf::Mesh> gltf_mesh)
 {
-    auto vsg_mesh = vsg::VertexIndexDraw::create();
+/*
+    struct Attributes : public vsg::Inherit<vsg::JSONParser::Schema, Attributes>
+    {
+        std::map<std::string, glTFid> values;
+    };
+
+    struct Primitive : public vsg::Inherit<ExtensionsExtras, Primitive>
+    {
+        Attributes attributes;
+        glTFid indices;
+        glTFid material;
+        uint32_t mode = 0;
+        vsg::ObjectsSchema<Attributes> targets;
+    };
+
+    struct Mesh : public vsg::Inherit<NameExtensionsExtras, Mesh>
+    {
+        vsg::ObjectsSchema<Primitive> primitives;
+        vsg::ValuesSchema<double> weights;
+    };
+*/
+
+    const VkPrimitiveTopology topologyLookup[] = {
+            VK_PRIMITIVE_TOPOLOGY_POINT_LIST, // 0, POINTS
+            VK_PRIMITIVE_TOPOLOGY_LINE_LIST, // 1, LINES
+            VK_PRIMITIVE_TOPOLOGY_LINE_LIST, // 2, LINE_LOOP, need special handling
+            VK_PRIMITIVE_TOPOLOGY_LINE_STRIP, // 3, LINE_STRIP
+            VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, // 4, TRIANGLES
+            VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, // 5, TRIANGLE_STRIP
+            VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN // 6, TRIANGLE_FAN
+    };
+
+    vsg::info("mesh = {");
+    vsg::info("    primitives = ", gltf_mesh->primitives.values.size());
+    vsg::info("    weight = ", gltf_mesh->weights.values.size());
+
+
+    std::vector<vsg::ref_ptr<vsg::Node>> nodes;
+
+    for(auto& primitive : gltf_mesh->primitives.values)
+    {
+        vsg::info("    primitive = {");
+        vsg::info("        attributes = {");
+        for(auto& [semantic, id] : primitive->attributes.values)
+        {
+             vsg::info("            ", semantic, ", ", id);
+        }
+        vsg::info("        }");
+        vsg::info("        indices = ", primitive->indices);
+        vsg::info("        material = ", primitive->material);
+        vsg::info("        mode = ", primitive->mode);
+        vsg::info("        targets = ", primitive->targets.values.size()) ;
+
+
+        vsg::info("        * topology = ", topologyLookup[primitive->mode]) ;
+        if (primitive->mode==2) vsg::info("        * LINE_LOOP needs special handling.");
+
+        vsg::info("    }");
+
+
+        auto vid = vsg::VertexIndexDraw::create();
+
+        nodes.push_back(vid);
+
+        if (primitive->indices)
+        {
+            auto indices = vsg_accessors[primitive->indices.value];
+            vid->assignIndices(indices);
+        }
+    }
+
+
+    if (nodes.empty())
+    {
+        vsg::warn("Empty mesh");
+        return {};
+    }
+
+    vsg::ref_ptr<vsg::Node> vsg_mesh;
+    if (nodes.size()==1)
+    {
+        vsg_mesh = nodes.front();
+    }
+    else
+    {
+        auto group = vsg::Group::create();
+        for(auto node : nodes)
+        {
+            group->addChild(node);
+        }
+
+        vsg_mesh = group;
+    }
 
     assign_name_extras(*gltf_mesh, *vsg_mesh);
 
@@ -212,6 +406,23 @@ vsg::ref_ptr<vsg::Object> gltf::SceneGraphBuilder::createSceneGraph(vsg::ref_ptr
 {
     if (!root) return {};
 
+    vsg_buffers.resize(root->buffers.values.size());
+    for(size_t bi = 0; bi<root->buffers.values.size(); ++bi)
+    {
+        vsg_buffers[bi] = createBuffer(root->buffers.values[bi]);
+    }
+
+    vsg_bufferViews.resize(root->bufferViews.values.size());
+    for(size_t bvi = 0; bvi<root->buffers.values.size(); ++bvi)
+    {
+        vsg_bufferViews[bvi] = createBufferView(root->bufferViews.values[bvi]);
+    }
+
+    vsg_accessors.resize(root->accessors.values.size());
+    for(size_t ai = 0; ai<root->buffers.values.size(); ++ai)
+    {
+        vsg_accessors[ai] = createAccessor(root->accessors.values[ai]);
+    }
 
     vsg::info("create cameras = ", root->cameras.values.size());
     vsg_cameras.resize(root->cameras.values.size());
