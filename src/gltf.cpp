@@ -993,9 +993,9 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
                     {
                         data = readData(decodedData, options, ".png");
                     }
-                    else if (mimeType=="image/bpm")
+                    else if (mimeType=="image/bmp")
                     {
-                        data = readData(decodedData, options, ".bpm");
+                        data = readData(decodedData, options, ".bmp");
                     }
                     else if (mimeType=="image/gif")
                     {
