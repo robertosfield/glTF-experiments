@@ -823,7 +823,7 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
 
     vsg::info("operationThreads = ", operationThreads);
 
-    auto dataURI = [](const std::string_view& uri, std::string_view& memeType, std::string_view& encoding, std::string_view& value) -> bool
+    auto dataURI = [](const std::string_view& uri, std::string_view& mimeType, std::string_view& encoding, std::string_view& value) -> bool
     {
         if (uri.size() <= 5) return false;
         if (uri.compare(0, 5, "data:") != 0) return false;
@@ -832,7 +832,7 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
         auto semicolon = uri.find(';', 6);
         auto comma = uri.find(',', semicolon+1);
 
-        memeType = std::string_view(&uri[5], semicolon-5);
+        mimeType = std::string_view(&uri[5], semicolon-5);
         encoding = std::string_view(&uri[semicolon+1], comma - semicolon-1);
         value = std::string_view(&uri[comma+1], uri.size() - comma -1);
 
@@ -870,7 +870,7 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
 
     struct DecodeOperation : public vsg::Inherit<OperationWithLatch, DecodeOperation>
     {
-        std::string_view memeType;
+        std::string_view mimeType;
         std::string_view encoding;
         std::string_view value;
         vsg::ref_ptr<const vsg::Options> options;
@@ -879,7 +879,7 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
 
         DecodeOperation(const std::string_view& m, const std::string_view& e, const std::string_view& v, vsg::ref_ptr<const vsg::Options> o, vsg::ref_ptr<vsg::Data>& d, uint32_t bl, vsg::ref_ptr<vsg::Latch> l = {}) :
             Inherit(l),
-            memeType(m),
+            mimeType(m),
             encoding(e),
             value(v),
             options(o),
@@ -983,43 +983,43 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
                     return data;
                 };
 
-                if (memeType.compare(0, 6, "image/") == 0)
+                if (mimeType.compare(0, 6, "image/") == 0)
                 {
-                    if (memeType=="image/png")
+                    if (mimeType=="image/png")
                     {
                         data = readData(decodedData, options, ".png");
                     }
-                    else if (memeType=="image/jpeg")
+                    else if (mimeType=="image/jpeg")
                     {
                         data = readData(decodedData, options, ".png");
                     }
-                    else if (memeType=="image/bpm")
+                    else if (mimeType=="image/bpm")
                     {
                         data = readData(decodedData, options, ".bpm");
                     }
-                    else if (memeType=="image/gif")
+                    else if (mimeType=="image/gif")
                     {
                         data = readData(decodedData, options, ".gif");
                     }
-                    else if (memeType=="image/ktx")
+                    else if (mimeType=="image/ktx")
                     {
                         data = readData(decodedData, options, ".ktx");
                     }
                     else
                     {
-                        vsg::info("Unsupported image data URI : memeType = ", memeType, ", encoding = ", encoding, ", value.size() = ", value.size());
+                        vsg::info("Unsupported image data URI : mimeType = ", mimeType, ", encoding = ", encoding, ", value.size() = ", value.size());
                     }
                 }
                 else
                 {
-                    vsg::info("We have a data URI : memeType = ", memeType, ", encoding = ", encoding, ", value.size() = ", value.size());
+                    vsg::info("We have a data URI : mimeType = ", mimeType, ", encoding = ", encoding, ", value.size() = ", value.size());
 
                     data = decodedData;
                 }
             }
             else
             {
-                vsg::warn("Error: encoding not supported. memeType = ", memeType, ", encoding = ", encoding);
+                vsg::warn("Error: encoding not supported. mimeType = ", mimeType, ", encoding = ", encoding);
 
             }
 
@@ -1034,12 +1034,12 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
     {
         if (!buffer->data && !buffer->uri.empty())
         {
-            std::string_view memeType;
+            std::string_view mimeType;
             std::string_view encoding;
             std::string_view value;
-            if (dataURI(buffer->uri, memeType, encoding, value))
+            if (dataURI(buffer->uri, mimeType, encoding, value))
             {
-                operations.push_back(DecodeOperation::create(memeType, encoding, value, options, buffer->data, buffer->byteLength));
+                operations.push_back(DecodeOperation::create(mimeType, encoding, value, options, buffer->data, buffer->byteLength));
             }
             else
             {
@@ -1052,12 +1052,12 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
     {
         if (!image->data && !image->uri.empty())
         {
-            std::string_view memeType;
+            std::string_view mimeType;
             std::string_view encoding;
             std::string_view value;
-            if (dataURI(image->uri, memeType, encoding, value))
+            if (dataURI(image->uri, mimeType, encoding, value))
             {
-                operations.push_back(DecodeOperation::create(memeType, encoding, value, options, image->data, std::numeric_limits<uint32_t>::max()));
+                operations.push_back(DecodeOperation::create(mimeType, encoding, value, options, image->data, std::numeric_limits<uint32_t>::max()));
             }
             else
             {
