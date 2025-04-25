@@ -467,6 +467,20 @@ namespace vsgXchange
         public:
             SceneGraphBuilder();
 
+            std::vector<vsg::ref_ptr<vsg::Camera>> vsg_cameras;
+            std::vector<vsg::ref_ptr<vsg::Node>> vsg_skins;
+            std::vector<vsg::ref_ptr<vsg::Node>> vsg_meshes;
+            std::vector<vsg::ref_ptr<vsg::Node>> vsg_nodes;
+            std::vector<vsg::ref_ptr<vsg::Node>> vsg_scenes;
+
+            void assign_extras(ExtensionsExtras& src, vsg::Object& dest);
+            void assign_name_extras(NameExtensionsExtras& src, vsg::Object& dest);
+
+            vsg::ref_ptr<vsg::Camera> createCamera(vsg::ref_ptr<gltf::Camera> gltf_camera);
+            vsg::ref_ptr<vsg::Node> createMesh(vsg::ref_ptr<gltf::Mesh> gltf_mesh);
+            vsg::ref_ptr<vsg::Node> createNode(vsg::ref_ptr<gltf::Node> gltf_node);
+            vsg::ref_ptr<vsg::Node> createScene(vsg::ref_ptr<gltf::Scene> gltf_scene);
+
             vsg::ref_ptr<vsg::Object> createSceneGraph(vsg::ref_ptr<gltf::glTF> root, vsg::ref_ptr<const vsg::Options> options);
         };
 
