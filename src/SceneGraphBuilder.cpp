@@ -257,7 +257,6 @@ vsg::ref_ptr<vsg::Node> gltf::SceneGraphBuilder::createMesh(vsg::ref_ptr<gltf::M
         vsg::info("        mode = ", primitive->mode);
         vsg::info("        targets = ", primitive->targets.values.size()) ;
 
-
         vsg::info("        * topology = ", topologyLookup[primitive->mode]) ;
         if (primitive->mode==2) vsg::info("        * LINE_LOOP needs special handling.");
 
@@ -265,8 +264,32 @@ vsg::ref_ptr<vsg::Node> gltf::SceneGraphBuilder::createMesh(vsg::ref_ptr<gltf::M
 
 
         auto vid = vsg::VertexIndexDraw::create();
-
         nodes.push_back(vid);
+        assign_extras(*primitive, *vid);
+
+
+        auto& attributes = primitive->attributes.values;
+        std::vector<vsg::ref_ptr<vsg::Data>> arrays;
+
+        // TODO need to map to ShadserSet values and use GraphicsPipelineConfigurator.
+        if (auto vertices_itr = attributes.find("POSITION"); vertices_itr != attributes.end())
+        {
+            arrays.push_back(vsg_accessors[vertices_itr->second.value]);
+        }
+        if (auto vertices_itr = attributes.find("NORMAL"); vertices_itr != attributes.end())
+        {
+            arrays.push_back(vsg_accessors[vertices_itr->second.value]);
+        }
+        if (auto vertices_itr = attributes.find("TEXCOORD_0"); vertices_itr != attributes.end())
+        {
+            arrays.push_back(vsg_accessors[vertices_itr->second.value]);
+        }
+        if (auto vertices_itr = attributes.find("TANGENT"); vertices_itr != attributes.end())
+        {
+            arrays.push_back(vsg_accessors[vertices_itr->second.value]);
+        }
+
+        vid->assignArrays(arrays);
 
         if (primitive->indices)
         {
@@ -274,7 +297,6 @@ vsg::ref_ptr<vsg::Node> gltf::SceneGraphBuilder::createMesh(vsg::ref_ptr<gltf::M
             vid->assignIndices(indices);
         }
     }
-
 
     if (nodes.empty())
     {
@@ -285,10 +307,12 @@ vsg::ref_ptr<vsg::Node> gltf::SceneGraphBuilder::createMesh(vsg::ref_ptr<gltf::M
     vsg::ref_ptr<vsg::Node> vsg_mesh;
     if (nodes.size()==1)
     {
+        vsg::info("Mesh with single primtiive");
         vsg_mesh = nodes.front();
     }
     else
     {
+        vsg::info("Mesh with multiple primtiives - could possible use vsg::Geomterty.");
         auto group = vsg::Group::create();
         for(auto node : nodes)
         {
@@ -413,13 +437,13 @@ vsg::ref_ptr<vsg::Object> gltf::SceneGraphBuilder::createSceneGraph(vsg::ref_ptr
     }
 
     vsg_bufferViews.resize(root->bufferViews.values.size());
-    for(size_t bvi = 0; bvi<root->buffers.values.size(); ++bvi)
+    for(size_t bvi = 0; bvi<root->bufferViews.values.size(); ++bvi)
     {
         vsg_bufferViews[bvi] = createBufferView(root->bufferViews.values[bvi]);
     }
 
     vsg_accessors.resize(root->accessors.values.size());
-    for(size_t ai = 0; ai<root->buffers.values.size(); ++ai)
+    for(size_t ai = 0; ai<root->accessors.values.size(); ++ai)
     {
         vsg_accessors[ai] = createAccessor(root->accessors.values[ai]);
     }
