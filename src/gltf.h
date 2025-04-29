@@ -25,6 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include <vsg/io/ReaderWriter.h>
 #include <vsg/io/JSONParser.h>
+#include <vsg/utils/GraphicsPipelineConfigurator.h>
 
 namespace vsgXchange
 {
@@ -86,6 +87,16 @@ namespace vsgXchange
             void report();
 
             void read_object(vsg::JSONParser& parser, const std::string_view& property) override;
+
+            template<class T>
+            vsg::ref_ptr<T> extension(const char* name) const
+            {
+                if (!extensions) return {};
+
+                auto itr = extensions->values.find(name);
+                if (itr != extensions->values.end()) return itr->second.cast<T>();
+                else return {};
+            }
         };
 
         struct NameExtensionsExtras : public vsg::Inherit<ExtensionsExtras, NameExtensionsExtras>
@@ -232,7 +243,7 @@ namespace vsgXchange
             void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
         };
 
-        /// https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_specular/README.md
+        /// https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_specular
         struct KHR_materials_specular : public vsg::Inherit<vsg::JSONParser::Schema, KHR_materials_specular>
         {
             double specularFactor = 1.0;
@@ -240,18 +251,38 @@ namespace vsgXchange
             vsg::ValuesSchema<double> specularColorFactor;
             TextureInfo specularColorTexture;
 
+            // extention prototype will be cloned when it's used.
+            vsg::ref_ptr<vsg::Object> clone(const vsg::CopyOp&) const override { return KHR_materials_specular::create(*this); }
+
             void read_array(vsg::JSONParser& parser, const std::string_view& property) override;
             void read_object(vsg::JSONParser& parser, const std::string_view& property) override;
             void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
         };
 
-        /// https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_ior/README.md
+        /// https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_ior
         struct KHR_materials_ior : public vsg::Inherit<vsg::JSONParser::Schema, KHR_materials_ior>
         {
             double ior = 1.5;
 
+            // extention prototype will be cloned when it's used.
+            vsg::ref_ptr<vsg::Object> clone(const vsg::CopyOp&) const override { return KHR_materials_ior::create(*this); }
+
             void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
         };
+
+        // Extensions used in glTF-Sample-Assets/Models
+        // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_anisotropy
+        // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_clearcoat
+        // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_diffuse_transmission
+        // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_dispersion
+        // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_emissive_strength
+        // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_iridescence
+        // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_pbrSpecularGlossiness
+        // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_sheen
+        // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_transmission
+        // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_unlit
+        // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_volume
+
 
         struct Material : public vsg::Inherit<NameExtensionsExtras, Material>
         {
@@ -467,11 +498,15 @@ namespace vsgXchange
         public:
             SceneGraphBuilder();
 
+            vsg::ref_ptr<vsg::ShaderSet> shaderSet;
+            vsg::ref_ptr<vsg::SharedObjects> sharedObjects;
+
             std::vector<vsg::ref_ptr<vsg::Data>> vsg_buffers;
             std::vector<vsg::ref_ptr<vsg::Data>> vsg_bufferViews;
             std::vector<vsg::ref_ptr<vsg::Data>> vsg_accessors;
             std::vector<vsg::ref_ptr<vsg::Camera>> vsg_cameras;
             std::vector<vsg::ref_ptr<vsg::Node>> vsg_skins;
+            std::vector<vsg::ref_ptr<vsg::DescriptorConfigurator>> vsg_materials;
             std::vector<vsg::ref_ptr<vsg::Node>> vsg_meshes;
             std::vector<vsg::ref_ptr<vsg::Node>> vsg_nodes;
             std::vector<vsg::ref_ptr<vsg::Node>> vsg_scenes;
@@ -483,6 +518,7 @@ namespace vsgXchange
             vsg::ref_ptr<vsg::Data> createBufferView(vsg::ref_ptr<gltf::BufferView> gltf_bufferView);
             vsg::ref_ptr<vsg::Data> createAccessor(vsg::ref_ptr<gltf::Accessor> gltf_accessor);
             vsg::ref_ptr<vsg::Camera> createCamera(vsg::ref_ptr<gltf::Camera> gltf_camera);
+            vsg::ref_ptr<vsg::DescriptorConfigurator> createMaterial(vsg::ref_ptr<gltf::Material> gltf_material);
             vsg::ref_ptr<vsg::Node> createMesh(vsg::ref_ptr<gltf::Mesh> gltf_mesh);
             vsg::ref_ptr<vsg::Node> createNode(vsg::ref_ptr<gltf::Node> gltf_node);
             vsg::ref_ptr<vsg::Node> createScene(vsg::ref_ptr<gltf::Scene> gltf_scene);

@@ -29,6 +29,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/nodes/Switch.h>
 #include <vsg/app/Camera.h>
 #include <vsg/maths/transform.h>
+#include <vsg/utils/GraphicsPipelineConfigurator.h>
+#include <vsg/state/material.h>
 
 using namespace vsgXchange;
 
@@ -75,7 +77,6 @@ void gltf::SceneGraphBuilder::assign_name_extras(NameExtensionsExtras& src, vsg:
 
 vsg::ref_ptr<vsg::Data> gltf::SceneGraphBuilder::createBuffer(vsg::ref_ptr<gltf::Buffer> gltf_buffer)
 {
-    vsg::info("Assigning buffer ", gltf_buffer->data);
     return gltf_buffer->data;
 }
 
@@ -98,8 +99,6 @@ vsg::ref_ptr<vsg::Data> gltf::SceneGraphBuilder::createBufferView(vsg::ref_ptr<g
                                                 gltf_bufferView->byteOffset,
                                                 gltf_bufferView->byteStride,
                                                 gltf_bufferView->byteLength / gltf_bufferView->byteStride);
-
-    vsg::info("Created BufferView ", vsg_buffer);
     return vsg_buffer;
 }
 
@@ -169,8 +168,6 @@ vsg::ref_ptr<vsg::Data> gltf::SceneGraphBuilder::createAccessor(vsg::ref_ptr<glt
             break;
     }
 
-    vsg::info("created vsg_Accessor ", vsg_data, ", gltf_accessor->count = ", gltf_accessor->count);
-
     return vsg_data;
 }
 
@@ -200,6 +197,78 @@ vsg::ref_ptr<vsg::Camera> gltf::SceneGraphBuilder::createCamera(vsg::ref_ptr<glt
     assign_extras(*gltf_camera, *vsg_camera);
 
     return vsg_camera;
+}
+
+vsg::ref_ptr<vsg::DescriptorConfigurator> gltf::SceneGraphBuilder::createMaterial(vsg::ref_ptr<gltf::Material> gltf_material)
+{
+    auto vsg_material = vsg::DescriptorConfigurator::create();
+
+    vsg_material->shaderSet = shaderSet;
+
+    vsg_material->two_sided = gltf_material->doubleSided;
+
+    vsg::info("vsg_material->two_sided = ", vsg_material->two_sided);
+
+    auto pbrMaterialValue = vsg::PbrMaterialValue::create();
+    auto& pbrMaterial = pbrMaterialValue->value();
+    // ? pbrMaterial.baseColorFactor{1.0f, 1.0f, 1.0f, 1.0f};
+    // ? pbrMaterial.diffuseFactor{0.9f, 0.9f, 0.9f, 1.0f};
+    // ? pbrMaterial.specularFactor{0.2f, 0.2f, 0.2f, 1.0f};
+    // ? pbrMaterial.metallicFactor{1.0f};
+    // ? pbrMaterial.roughnessFactor{1.0f};
+
+    pbrMaterial.alphaMaskCutoff = gltf_material->alphaCutoff;
+    // ? pbrMaterial.alphaMask = 1.0f;
+
+    // material.alphaMode string?
+
+    if (!gltf_material->emissiveFactor.values.empty())
+    {
+        pbrMaterial.emissiveFactor.set(gltf_material->emissiveFactor.values[0], gltf_material->emissiveFactor.values[1], gltf_material->emissiveFactor.values[2], 1.0);
+        vsg::info("Set pbrMaterial.emissiveFactor = ", pbrMaterial.emissiveFactor);
+    }
+
+    if (auto materials_specular = gltf_material->extension<KHR_materials_specular>("KHR_materials_specular"))
+    {
+        vsg::info("Have ", materials_specular);
+        vsg::info("   specularFactor = ", materials_specular->specularFactor);
+        if (materials_specular->specularTexture.index) vsg::info("   specularTexture = ", materials_specular->specularTexture.index, ", ", materials_specular->specularTexture.texCoord);
+        vsg::info("   specularColorFactor = ", materials_specular->specularColorFactor.values.size());
+        if (materials_specular->specularColorTexture.index) vsg::info("   specularColorTexture = ", materials_specular->specularColorTexture.index, ", ", materials_specular->specularColorTexture.texCoord);
+
+    }
+
+    if (auto materials_ior = gltf_material->extension<KHR_materials_ior>("KHR_materials_ior"))
+    {
+        vsg::info("Have ", materials_ior);
+    }
+
+    if (gltf_material->extensions)
+    {
+        for(auto& [name, schema] : gltf_material->extensions->values)
+        {
+            vsg::info("extensions ", name, ", ", schema);
+        }
+    }
+
+    vsg_material->assignDescriptor("material", pbrMaterialValue);
+
+    //vsg_material->defines.insert("VSG_ALPHA_TEST");
+    //vsg_material->defines.insert("VSG_TWO_SIDED_LIGHTING");
+    //vsg_material->defines.insert("VSG_WORKFLOW_SPECGLOSS");
+
+#if 0
+    shaderSet->addDescriptorBinding("diffuseMap", "VSG_DIFFUSE_MAP", MATERIAL_DESCRIPTOR_SET, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, vsg::ubvec4Array2D::create(1, 1, vsg::Data::Properties{VK_FORMAT_R8G8B8A8_UNORM}));
+    shaderSet->addDescriptorBinding("detailMap", "VSG_DETAIL_MAP", MATERIAL_DESCRIPTOR_SET, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, vsg::ubvec4Array2D::create(1, 1, vsg::Data::Properties{VK_FORMAT_R8G8B8A8_UNORM}));
+    shaderSet->addDescriptorBinding("normalMap", "VSG_NORMAL_MAP", MATERIAL_DESCRIPTOR_SET, 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, vsg::vec3Array2D::create(1, 1, vsg::Data::Properties{VK_FORMAT_R32G32B32_SFLOAT}), vsg::CoordinateSpace::LINEAR);
+    shaderSet->addDescriptorBinding("aoMap", "VSG_LIGHTMAP_MAP", MATERIAL_DESCRIPTOR_SET, 3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, vsg::floatArray2D::create(1, 1, vsg::Data::Properties{VK_FORMAT_R32_SFLOAT}));
+    shaderSet->addDescriptorBinding("emissiveMap", "VSG_EMISSIVE_MAP", MATERIAL_DESCRIPTOR_SET, 4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, vsg::ubvec4Array2D::create(1, 1, vsg::Data::Properties{VK_FORMAT_R8G8B8A8_UNORM}));
+    shaderSet->addDescriptorBinding("specularMap", "VSG_SPECULAR_MAP", MATERIAL_DESCRIPTOR_SET, 5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, vsg::ubvec4Array2D::create(1, 1, vsg::Data::Properties{VK_FORMAT_R8G8B8A8_UNORM}));
+    shaderSet->addDescriptorBinding("mrMap", "VSG_METALLROUGHNESS_MAP", MATERIAL_DESCRIPTOR_SET, 6, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, vsg::vec2Array2D::create(1, 1, vsg::Data::Properties{VK_FORMAT_R32G32_SFLOAT}), vsg::CoordinateSpace::LINEAR);
+    shaderSet->addDescriptorBinding("material", "", MATERIAL_DESCRIPTOR_SET, 10, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, vsg::PbrMaterialValue::create(), vsg::CoordinateSpace::LINEAR);
+#endif
+
+    return vsg_material;
 }
 
 vsg::ref_ptr<vsg::Node> gltf::SceneGraphBuilder::createMesh(vsg::ref_ptr<gltf::Mesh> gltf_mesh)
@@ -236,15 +305,27 @@ vsg::ref_ptr<vsg::Node> gltf::SceneGraphBuilder::createMesh(vsg::ref_ptr<gltf::M
             VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN // 6, TRIANGLE_FAN
     };
 
+    const std::map<std::string, std::string> attributeLookup = {
+        {"POSITION", "vsg_Vertex"},
+        {"NORMAL", "vsg_Normal"},
+        {"TEXCOORD_0", "vsg_TexCoord0"},
+        {"COLOR", "vsg_Color"}
+    };
+
+#if 0
     vsg::info("mesh = {");
     vsg::info("    primitives = ", gltf_mesh->primitives.values.size());
     vsg::info("    weight = ", gltf_mesh->weights.values.size());
-
+#endif
 
     std::vector<vsg::ref_ptr<vsg::Node>> nodes;
 
+    auto config = vsg::GraphicsPipelineConfigurator::create(shaderSet);
+
     for(auto& primitive : gltf_mesh->primitives.values)
     {
+
+#if 0
         vsg::info("    primitive = {");
         vsg::info("        attributes = {");
         for(auto& [semantic, id] : primitive->attributes.values)
@@ -261,36 +342,29 @@ vsg::ref_ptr<vsg::Node> gltf::SceneGraphBuilder::createMesh(vsg::ref_ptr<gltf::M
         if (primitive->mode==2) vsg::info("        * LINE_LOOP needs special handling.");
 
         vsg::info("    }");
-
+#endif
 
         auto vid = vsg::VertexIndexDraw::create();
         nodes.push_back(vid);
         assign_extras(*primitive, *vid);
 
+#if 1
+        vsg::DataList vertexArrays;
 
-        auto& attributes = primitive->attributes.values;
-        std::vector<vsg::ref_ptr<vsg::Data>> arrays;
-
-        // TODO need to map to ShadserSet values and use GraphicsPipelineConfigurator.
-        if (auto vertices_itr = attributes.find("POSITION"); vertices_itr != attributes.end())
+        for(auto& [attribute_name, id] : primitive->attributes.values)
         {
-            arrays.push_back(vsg_accessors[vertices_itr->second.value]);
-        }
-        if (auto vertices_itr = attributes.find("NORMAL"); vertices_itr != attributes.end())
-        {
-            arrays.push_back(vsg_accessors[vertices_itr->second.value]);
-        }
-        if (auto vertices_itr = attributes.find("TEXCOORD_0"); vertices_itr != attributes.end())
-        {
-            arrays.push_back(vsg_accessors[vertices_itr->second.value]);
-        }
-        if (auto vertices_itr = attributes.find("TANGENT"); vertices_itr != attributes.end())
-        {
-            arrays.push_back(vsg_accessors[vertices_itr->second.value]);
+            if (auto itr = attributeLookup.find(attribute_name); itr != attributeLookup.end())
+            {
+                config->assignArray(vertexArrays, itr->second, VK_VERTEX_INPUT_RATE_VERTEX, vsg_accessors[id.value]);
+            }
+            else
+            {
+                vsg::warn("Unsupport attribute type ", attribute_name);
+            }
         }
 
-        vid->assignArrays(arrays);
-
+        vid->assignArrays(vertexArrays);
+#endif
         if (primitive->indices)
         {
             auto indices = vsg_accessors[primitive->indices.value];
@@ -307,12 +381,12 @@ vsg::ref_ptr<vsg::Node> gltf::SceneGraphBuilder::createMesh(vsg::ref_ptr<gltf::M
     vsg::ref_ptr<vsg::Node> vsg_mesh;
     if (nodes.size()==1)
     {
-        vsg::info("Mesh with single primtiive");
+        // vsg::info("Mesh with single primtiive");
         vsg_mesh = nodes.front();
     }
     else
     {
-        vsg::info("Mesh with multiple primtiives - could possible use vsg::Geomterty.");
+        // vsg::info("Mesh with multiple primtiives - could possible use vsg::Geomterty.");
         auto group = vsg::Group::create();
         for(auto node : nodes)
         {
@@ -352,9 +426,9 @@ vsg::ref_ptr<vsg::Node> gltf::SceneGraphBuilder::createNode(vsg::ref_ptr<gltf::N
         {
             auto& m = gltf_node->matrix.values;
             transform->matrix.set(m[0], m[1], m[2], m[3],
-                                    m[4], m[5], m[6], m[7],
-                                    m[8], m[9], m[10], m[11],
-                                    m[12], m[13], m[14], m[15]);
+                                  m[4], m[5], m[6], m[7],
+                                  m[8], m[9], m[10], m[11],
+                                  m[12], m[13], m[14], m[15]);
         }
         else
         {
@@ -424,6 +498,15 @@ vsg::ref_ptr<vsg::Object> gltf::SceneGraphBuilder::createSceneGraph(vsg::ref_ptr
 {
     if (!root) return {};
 
+    if (options) sharedObjects = options->sharedObjects;
+    if (!sharedObjects) sharedObjects = vsg::SharedObjects::create();
+
+    if (!shaderSet)
+    {
+        shaderSet = vsg::createPhysicsBasedRenderingShaderSet(options);
+        if (sharedObjects) sharedObjects->share(shaderSet);
+    }
+
     vsg_buffers.resize(root->buffers.values.size());
     for(size_t bi = 0; bi<root->buffers.values.size(); ++bi)
     {
@@ -458,6 +541,13 @@ vsg::ref_ptr<vsg::Object> gltf::SceneGraphBuilder::createSceneGraph(vsg::ref_ptr
         vsg_skin = vsg::Node::create();
 
         assign_name_extras(*gltf_skin, *vsg_skin);
+    }
+
+    vsg::info("create materials = ", root->materials.values.size());
+    vsg_materials.resize(root->materials.values.size());
+    for(size_t mi=0; mi<root->materials.values.size(); ++mi)
+    {
+        vsg_materials[mi] = createMaterial(root->materials.values[mi]);
     }
 
     vsg::info("create meshes = ", root->meshes.values.size());

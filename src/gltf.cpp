@@ -46,8 +46,12 @@ void gltf::Extensions::read_object(vsg::JSONParser& parser, const std::string_vi
     auto schema = parser.getRefObject<vsg::JSONParser::Schema>(str_property);
     if (schema)
     {
+        vsg::info("gltf::Extensions::read_object() property = ", property, ", ", schema);
+
         if (auto extension = vsg::clone(schema))
         {
+            vsg::info("   clone ", extension);
+
             parser.read_object(*extension);
             values[str_property] = extension;
             return;
