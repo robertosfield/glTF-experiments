@@ -199,6 +199,56 @@ vsg::ref_ptr<vsg::Camera> gltf::SceneGraphBuilder::createCamera(vsg::ref_ptr<glt
     return vsg_camera;
 }
 
+vsg::ref_ptr<vsg::Data> gltf::SceneGraphBuilder::createImage(vsg::ref_ptr<gltf::Image> gltf_image)
+{
+    if (gltf_image->data)
+    {
+        vsg::info("createImage(", gltf_image, ") gltf_image->data = ", gltf_image->data);
+        return gltf_image->data;
+    }
+    else if (gltf_image->bufferView)
+    {
+        auto data = vsg_bufferViews[gltf_image->bufferView.value];
+        vsg::info("createImage(", gltf_image, ") bufferView = ", gltf_image->bufferView, ", vsg_bufferView = ", data);
+        return data;
+    }
+    else
+    {
+        vsg::info("createImage(", gltf_image, ") uri = ", gltf_image->uri, ", nothing to create vsg::Data image from.");
+        return {};
+    }
+}
+
+vsg::ref_ptr<vsg::Sampler> gltf::SceneGraphBuilder::createSampler(vsg::ref_ptr<gltf::Sampler> gltf_sampler)
+{
+    auto vsg_sampler = vsg::Sampler::create();
+#if 0
+    // TODO:
+            uint32_t minFilter = 0;
+            uint32_t magFilter = 0;
+            uint32_t wrapS = 0;
+            uint32_t wrapT = 0;
+#endif
+    return vsg_sampler;
+}
+
+gltf::SceneGraphBuilder::SamplerImage gltf::SceneGraphBuilder::createTexture(vsg::ref_ptr<gltf::Texture> gltf_texture)
+{
+    SamplerImage samplerImage;
+
+    if (gltf_texture->sampler)
+    {
+        samplerImage.sampler = vsg_samplers[gltf_texture->sampler.value];
+    }
+
+    if (gltf_texture->source)
+    {
+        samplerImage.image = vsg_images[gltf_texture->source.value];
+    }
+
+    return samplerImage;
+}
+
 vsg::ref_ptr<vsg::DescriptorConfigurator> gltf::SceneGraphBuilder::createMaterial(vsg::ref_ptr<gltf::Material> gltf_material)
 {
     auto vsg_material = vsg::DescriptorConfigurator::create();
@@ -206,36 +256,117 @@ vsg::ref_ptr<vsg::DescriptorConfigurator> gltf::SceneGraphBuilder::createMateria
     vsg_material->shaderSet = shaderSet;
 
     vsg_material->two_sided = gltf_material->doubleSided;
-
-    vsg::info("vsg_material->two_sided = ", vsg_material->two_sided);
+    // TODO: vsg_material->defines.insert("VSG_TWO_SIDED_LIGHTING");
 
     auto pbrMaterialValue = vsg::PbrMaterialValue::create();
     auto& pbrMaterial = pbrMaterialValue->value();
-    // ? pbrMaterial.baseColorFactor{1.0f, 1.0f, 1.0f, 1.0f};
-    // ? pbrMaterial.diffuseFactor{0.9f, 0.9f, 0.9f, 1.0f};
-    // ? pbrMaterial.specularFactor{0.2f, 0.2f, 0.2f, 1.0f};
-    // ? pbrMaterial.metallicFactor{1.0f};
-    // ? pbrMaterial.roughnessFactor{1.0f};
 
-    pbrMaterial.alphaMaskCutoff = gltf_material->alphaCutoff;
-    // ? pbrMaterial.alphaMask = 1.0f;
+    if (gltf_material->pbrMetallicRoughness.baseColorFactor.values.size()==4)
+    {
+        auto& baseColorFactor = gltf_material->pbrMetallicRoughness.baseColorFactor.values;
+        pbrMaterial.baseColorFactor.set(baseColorFactor[0], baseColorFactor[1], baseColorFactor[2], baseColorFactor[3]);
+        vsg::info("Assigned baseColorFacator ", pbrMaterial.baseColorFactor);
+    }
 
-    // material.alphaMode string?
+    if (gltf_material->pbrMetallicRoughness.baseColorTexture.index)
+    {
+        auto image = vsg_images[gltf_material->pbrMetallicRoughness.baseColorTexture.index.value];
+        if (image)
+        {
+            vsg::info("Assigned diffuseMap ", image);
+            vsg_material->assignTexture("diffuseMap", image);
+        }
+        else
+        {
+            vsg::warn("Could not assign diffuseMap ", gltf_material->pbrMetallicRoughness.baseColorTexture.index);
+        }
+    }
 
-    if (!gltf_material->emissiveFactor.values.empty())
+    pbrMaterial.metallicFactor = gltf_material->pbrMetallicRoughness.metallicFactor;
+    pbrMaterial.roughnessFactor = gltf_material->pbrMetallicRoughness.roughnessFactor;
+
+    if (gltf_material->pbrMetallicRoughness.metallicRoughnessTexture.index)
+    {
+        auto image = vsg_images[gltf_material->pbrMetallicRoughness.metallicRoughnessTexture.index.value];
+        if (image)
+        {
+            vsg::info("Assigned metallicRoughnessTexture ", image);
+            vsg_material->assignTexture("mrMap", image);
+        }
+        else
+        {
+            vsg::warn("Could not assign metallicRoughnessTexture ", gltf_material->pbrMetallicRoughness.metallicRoughnessTexture.index);
+        }
+    }
+
+    // TODO : pbrMaterial.diffuseFactor? No glTF mapping?
+
+    // TODO : NormalTextureInfo normalTexture;
+    // VSG -> normalMap
+
+    // TODO : OcclusionTextureInfo occlusionTexture;
+    // VSG -> aoMap
+
+    if (gltf_material->emissiveTexture.index)
+    {
+        auto image = vsg_images[gltf_material->emissiveTexture.index.value];
+        if (image)
+        {
+            vsg::info("Assigned emissiveTexture ", image);
+            vsg_material->assignTexture("emissiveMap", image);
+        }
+        else
+        {
+            vsg::warn("Could not assign emissiveTexture ", gltf_material->emissiveTexture.index);
+        }
+    }
+
+    if (gltf_material->emissiveFactor.values.size()>=3)
     {
         pbrMaterial.emissiveFactor.set(gltf_material->emissiveFactor.values[0], gltf_material->emissiveFactor.values[1], gltf_material->emissiveFactor.values[2], 1.0);
         vsg::info("Set pbrMaterial.emissiveFactor = ", pbrMaterial.emissiveFactor);
     }
 
+
+    pbrMaterial.alphaMaskCutoff = gltf_material->alphaCutoff;
+
+    // TODO: vsg_material->defines.insert("VSG_ALPHA_TEST");
+    // TODO: pbrMaterial.alphaMask = 1.0f;
+    // TODO: material.alphaMode string?
+
     if (auto materials_specular = gltf_material->extension<KHR_materials_specular>("KHR_materials_specular"))
     {
         vsg::info("Have ", materials_specular);
-        vsg::info("   specularFactor = ", materials_specular->specularFactor);
-        if (materials_specular->specularTexture.index) vsg::info("   specularTexture = ", materials_specular->specularTexture.index, ", ", materials_specular->specularTexture.texCoord);
-        vsg::info("   specularColorFactor = ", materials_specular->specularColorFactor.values.size());
-        if (materials_specular->specularColorTexture.index) vsg::info("   specularColorTexture = ", materials_specular->specularColorTexture.index, ", ", materials_specular->specularColorTexture.texCoord);
 
+        // ? pbrMaterial.specularFactor{0.2f, 0.2f, 0.2f, 1.0f};
+
+        vsg::info("Not assigned yet: specularFactor = ", materials_specular->specularFactor);
+
+        if (materials_specular->specularTexture.index)
+        {
+            auto image = vsg_images[materials_specular->specularTexture.index.value ];
+            if (image)
+            {
+                vsg::info("Assigned specularTexture ", image);
+                vsg_material->assignTexture("specularMap", image);
+            }
+            else
+            {
+                vsg::warn("Could not assign specularTexture ", materials_specular->specularTexture.index);
+            }
+        }
+
+        if (materials_specular->specularColorFactor.values.size() >= 3)
+        {
+            auto& specularColorFactor = materials_specular->specularColorFactor.values;
+            pbrMaterial.specularFactor.set(specularColorFactor[0], specularColorFactor[1], specularColorFactor[2], 1.0); // TODO, alpha value? Shoult it be specularFactor?
+            vsg::info("Assigned specularColorFactor pbrMaterial.specularFactor ", pbrMaterial.specularFactor);
+        }
+
+        if (materials_specular->specularColorTexture.index)
+        {
+            vsg::info("Not assigned yet: specularColorTexture = ", materials_specular->specularColorTexture.index, ", ", materials_specular->specularColorTexture.texCoord);
+        }
     }
 
     if (auto materials_ior = gltf_material->extension<KHR_materials_ior>("KHR_materials_ior"))
@@ -253,20 +384,8 @@ vsg::ref_ptr<vsg::DescriptorConfigurator> gltf::SceneGraphBuilder::createMateria
 
     vsg_material->assignDescriptor("material", pbrMaterialValue);
 
-    //vsg_material->defines.insert("VSG_ALPHA_TEST");
-    //vsg_material->defines.insert("VSG_TWO_SIDED_LIGHTING");
-    //vsg_material->defines.insert("VSG_WORKFLOW_SPECGLOSS");
-
-#if 0
-    shaderSet->addDescriptorBinding("diffuseMap", "VSG_DIFFUSE_MAP", MATERIAL_DESCRIPTOR_SET, 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, vsg::ubvec4Array2D::create(1, 1, vsg::Data::Properties{VK_FORMAT_R8G8B8A8_UNORM}));
-    shaderSet->addDescriptorBinding("detailMap", "VSG_DETAIL_MAP", MATERIAL_DESCRIPTOR_SET, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, vsg::ubvec4Array2D::create(1, 1, vsg::Data::Properties{VK_FORMAT_R8G8B8A8_UNORM}));
-    shaderSet->addDescriptorBinding("normalMap", "VSG_NORMAL_MAP", MATERIAL_DESCRIPTOR_SET, 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, vsg::vec3Array2D::create(1, 1, vsg::Data::Properties{VK_FORMAT_R32G32B32_SFLOAT}), vsg::CoordinateSpace::LINEAR);
-    shaderSet->addDescriptorBinding("aoMap", "VSG_LIGHTMAP_MAP", MATERIAL_DESCRIPTOR_SET, 3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, vsg::floatArray2D::create(1, 1, vsg::Data::Properties{VK_FORMAT_R32_SFLOAT}));
-    shaderSet->addDescriptorBinding("emissiveMap", "VSG_EMISSIVE_MAP", MATERIAL_DESCRIPTOR_SET, 4, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, vsg::ubvec4Array2D::create(1, 1, vsg::Data::Properties{VK_FORMAT_R8G8B8A8_UNORM}));
-    shaderSet->addDescriptorBinding("specularMap", "VSG_SPECULAR_MAP", MATERIAL_DESCRIPTOR_SET, 5, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, vsg::ubvec4Array2D::create(1, 1, vsg::Data::Properties{VK_FORMAT_R8G8B8A8_UNORM}));
-    shaderSet->addDescriptorBinding("mrMap", "VSG_METALLROUGHNESS_MAP", MATERIAL_DESCRIPTOR_SET, 6, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, vsg::vec2Array2D::create(1, 1, vsg::Data::Properties{VK_FORMAT_R32G32_SFLOAT}), vsg::CoordinateSpace::LINEAR);
-    shaderSet->addDescriptorBinding("material", "", MATERIAL_DESCRIPTOR_SET, 10, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, vsg::PbrMaterialValue::create(), vsg::CoordinateSpace::LINEAR);
-#endif
+    // TODO: vsg_material->defines.insert("VSG_WORKFLOW_SPECGLOSS");
+    // TODO: VSG -> detailMap
 
     return vsg_material;
 }
@@ -542,6 +661,29 @@ vsg::ref_ptr<vsg::Object> gltf::SceneGraphBuilder::createSceneGraph(vsg::ref_ptr
 
         assign_name_extras(*gltf_skin, *vsg_skin);
     }
+
+    vsg::info("create samplers = ", root->samplers.values.size());
+    vsg_samplers.resize(root->samplers.values.size());
+    for(size_t sai=0; sai<root->samplers.values.size(); ++sai)
+    {
+        vsg_samplers[sai] = createSampler(root->samplers.values[sai]);
+    }
+
+    vsg::info("create images = ", root->images.values.size());
+    vsg_images.resize(root->images.values.size());
+    for(size_t ii=0; ii<root->images.values.size(); ++ii)
+    {
+         if (root->images.values[ii]) vsg_images[ii] = createImage(root->images.values[ii]);
+    }
+
+
+    vsg::info("create textures = ", root->textures.values.size());
+    vsg_textures.resize(root->textures.values.size());
+    for(size_t ti=0; ti<root->textures.values.size(); ++ti)
+    {
+        vsg_textures[ti] = createTexture(root->textures.values[ti]);
+    }
+
 
     vsg::info("create materials = ", root->materials.values.size());
     vsg_materials.resize(root->materials.values.size());

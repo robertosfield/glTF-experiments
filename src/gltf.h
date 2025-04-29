@@ -283,6 +283,28 @@ namespace vsgXchange
         // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_unlit
         // https://github.com/KhronosGroup/glTF/blob/main/extensions/2.0/Khronos/KHR_materials_volume
 
+        struct Sampler : public vsg::Inherit<NameExtensionsExtras, Sampler>
+        {
+            uint32_t minFilter = 0;
+            uint32_t magFilter = 0;
+            uint32_t wrapS = 0;
+            uint32_t wrapT = 0;
+
+            // extensions
+            // extras
+
+            void report();
+            void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
+        };
+
+        struct Texture : public vsg::Inherit<NameExtensionsExtras, Texture>
+        {
+            glTFid sampler;
+            glTFid source;
+
+            void report();
+            void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
+        };
 
         struct Material : public vsg::Inherit<NameExtensionsExtras, Material>
         {
@@ -351,19 +373,6 @@ namespace vsgXchange
             void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
         };
 
-        struct Sampler : public vsg::Inherit<NameExtensionsExtras, Sampler>
-        {
-            uint32_t minFilter = 0;
-            uint32_t magFilter = 0;
-            uint32_t wrapS = 0;
-            uint32_t wrapT = 0;
-
-            // extensions
-            // extras
-
-            void report();
-            void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
-        };
 
         struct Scene : public vsg::Inherit<NameExtensionsExtras, Scene>
         {
@@ -371,15 +380,6 @@ namespace vsgXchange
 
             void report();
             void read_array(vsg::JSONParser& parser, const std::string_view& property) override;
-        };
-
-        struct Texture : public vsg::Inherit<NameExtensionsExtras, Texture>
-        {
-            glTFid sampler;
-            glTFid source;
-
-            void report();
-            void read_number(vsg::JSONParser& parser, const std::string_view& property, std::istream& input) override;
         };
 
         struct AnimationTarget : public vsg::Inherit<ExtensionsExtras, AnimationTarget>
@@ -493,10 +493,17 @@ namespace vsgXchange
 
         };
 
+
         class SceneGraphBuilder : public vsg::Inherit<vsg::Object, SceneGraphBuilder>
         {
         public:
             SceneGraphBuilder();
+
+            struct SamplerImage
+            {
+                vsg::ref_ptr<vsg::Sampler> sampler;
+                vsg::ref_ptr<vsg::Data> image;
+            };
 
             vsg::ref_ptr<vsg::ShaderSet> shaderSet;
             vsg::ref_ptr<vsg::SharedObjects> sharedObjects;
@@ -506,6 +513,9 @@ namespace vsgXchange
             std::vector<vsg::ref_ptr<vsg::Data>> vsg_accessors;
             std::vector<vsg::ref_ptr<vsg::Camera>> vsg_cameras;
             std::vector<vsg::ref_ptr<vsg::Node>> vsg_skins;
+            std::vector<vsg::ref_ptr<vsg::Sampler>> vsg_samplers;
+            std::vector<vsg::ref_ptr<vsg::Data>> vsg_images;
+            std::vector<SamplerImage> vsg_textures;
             std::vector<vsg::ref_ptr<vsg::DescriptorConfigurator>> vsg_materials;
             std::vector<vsg::ref_ptr<vsg::Node>> vsg_meshes;
             std::vector<vsg::ref_ptr<vsg::Node>> vsg_nodes;
@@ -518,6 +528,9 @@ namespace vsgXchange
             vsg::ref_ptr<vsg::Data> createBufferView(vsg::ref_ptr<gltf::BufferView> gltf_bufferView);
             vsg::ref_ptr<vsg::Data> createAccessor(vsg::ref_ptr<gltf::Accessor> gltf_accessor);
             vsg::ref_ptr<vsg::Camera> createCamera(vsg::ref_ptr<gltf::Camera> gltf_camera);
+            vsg::ref_ptr<vsg::Sampler> createSampler(vsg::ref_ptr<gltf::Sampler> gltf_sampler);
+            vsg::ref_ptr<vsg::Data> createImage(vsg::ref_ptr<gltf::Image> gltf_image);
+            SamplerImage createTexture(vsg::ref_ptr<gltf::Texture> gltf_texture);
             vsg::ref_ptr<vsg::DescriptorConfigurator> createMaterial(vsg::ref_ptr<gltf::Material> gltf_material);
             vsg::ref_ptr<vsg::Node> createMesh(vsg::ref_ptr<gltf::Mesh> gltf_mesh);
             vsg::ref_ptr<vsg::Node> createNode(vsg::ref_ptr<gltf::Node> gltf_node);
@@ -526,12 +539,19 @@ namespace vsgXchange
             vsg::ref_ptr<vsg::Object> createSceneGraph(vsg::ref_ptr<gltf::glTF> root, vsg::ref_ptr<const vsg::Options> options);
         };
 
+        /// function for extracting components of a uri
+        static bool dataURI(const std::string_view& uri, std::string_view& mimeType, std::string_view& encoding, std::string_view& value);
+
+        /// function for mapping a mimeType to .extension that can be used with vsgXchange's plugins.
+        static vsg::Path mimeTypeToExtension(const std::string_view& mimeType);
+
     };
 
     /// output stream support for glTFid
     inline std::ostream& operator<<(std::ostream& output, const gltf::glTFid& id)
     {
-        output << "glTFid("<<id.value<<")";
+        if (id) output << "glTFid("<<id.value<<")";
+        else output << "glTFid(null)";
         return output;
     }
 

@@ -46,17 +46,15 @@ void gltf::Extensions::read_object(vsg::JSONParser& parser, const std::string_vi
     auto schema = parser.getRefObject<vsg::JSONParser::Schema>(str_property);
     if (schema)
     {
-        vsg::info("gltf::Extensions::read_object() property = ", property, ", ", schema);
-
         if (auto extension = vsg::clone(schema))
         {
-            vsg::info("   clone ", extension);
-
             parser.read_object(*extension);
             values[str_property] = extension;
             return;
         }
     }
+
+    vsg::info("gltf::Extensions::read_object() property = ", property);
 
     auto extensionAsMetaData = JSONtoMetaDataSchema::create();
     parser.read_object(*extensionAsMetaData);
@@ -182,16 +180,16 @@ void gltf::Accessor::report()
     vsg::info("    normalized: ", normalized);
     vsg::info("    count: ", count);
     vsg::info("    type: ", type);
-    for(auto& value : max.values) { vsg::info("    max : ", value); }
     for(auto& value : min.values) { vsg::info("    min : ", value); }
+    for(auto& value : max.values) { vsg::info("    max : ", value); }
     if (sparse) sparse->report();
     vsg::info("} ");
 }
 
 void gltf::Accessor::read_array(vsg::JSONParser& parser, const std::string_view& property)
 {
-    if (property == "max") parser.read_array(max);
-    else if (property == "min") parser.read_array(max);
+    if (property == "min") parser.read_array(min);
+    else if (property == "max") parser.read_array(max);
     else parser.warning();
 }
 
@@ -282,7 +280,8 @@ void gltf::Buffer::report()
 {
     vsg::info("Buffer { ");
     NameExtensionsExtras::report();
-    vsg::info("    uri: ", uri, " data: ", data);
+    if (uri.size() < 128) vsg::info("    uri: ", uri, " data: ", data);
+    else vsg::info("    uri: first 128 bytes [ ", std::string_view(uri.data(), 128), " ] data: ", data);
     vsg::info("    byteLength: ", byteLength);
     vsg::info("} ");
 }
@@ -307,7 +306,8 @@ void gltf::Image::report()
 {
     vsg::info("Image { ");
     NameExtensionsExtras::report();
-    vsg::info("    uri: ", uri, " data: ", data);
+    if (uri.size() < 128) vsg::info("    uri: ", uri, " data: ", data);
+    else vsg::info("    uri: first 128 bytes [ ", std::string_view(uri.data(), 128), " ] data: ", data);
     vsg::info("    mimeType: ", mimeType);
     vsg::info("    bufferView: ", bufferView);
     vsg::info("} ");
@@ -843,6 +843,16 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
         return true;
     };
 
+    auto mimeTypeToExtension = [](const std::string_view& mimeType) -> vsg::Path
+    {
+        if (mimeType=="image/png") return ".png";
+        else if (mimeType=="image/jpeg") return ".jpeg";
+        else if (mimeType=="image/bmp") return ".bmp";
+        else if (mimeType=="image/gif") return ".gif";
+        else if (mimeType=="image/ktx") return ".ktx";
+        return "";
+    };
+
     struct OperationWithLatch : public vsg::Inherit<vsg::Operation, OperationWithLatch>
     {
         vsg::ref_ptr<vsg::Latch> latch;
@@ -850,13 +860,13 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
         OperationWithLatch(vsg::ref_ptr<vsg::Latch> l) : latch(l) {}
     };
 
-    struct ReadOperation : public vsg::Inherit<OperationWithLatch, ReadOperation>
+    struct ReadFileOperation : public vsg::Inherit<OperationWithLatch, ReadFileOperation>
     {
         std::string_view filename;
         vsg::ref_ptr<const vsg::Options> options;
         vsg::ref_ptr<vsg::Data>& data;
 
-        ReadOperation(const std::string_view& f, vsg::ref_ptr<const vsg::Options> o, vsg::ref_ptr<vsg::Data>& d, vsg::ref_ptr<vsg::Latch> l = {}) :
+        ReadFileOperation(const std::string_view& f, vsg::ref_ptr<const vsg::Options> o, vsg::ref_ptr<vsg::Data>& d, vsg::ref_ptr<vsg::Latch> l = {}) :
             Inherit(l),
             filename(f),
             options(o),
@@ -865,6 +875,42 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
         void run() override
         {
             data = vsg::read_cast<vsg::Data>(std::string(filename), options);
+
+            if (latch) latch->count_down();
+        }
+    };
+
+    struct ReadBufferOperation : public vsg::Inherit<OperationWithLatch, ReadBufferOperation>
+    {
+        vsg::ref_ptr<Buffer> buffer;
+        uint32_t byteOffset = 0;
+        uint32_t byteLength = 0;
+        vsg::ref_ptr<BufferView> bufferView;
+        vsg::ref_ptr<const vsg::Options> options;
+        vsg::ref_ptr<vsg::Data>& data;
+
+        ReadBufferOperation(vsg::ref_ptr<Buffer> b, uint32_t offset, uint32_t length, vsg::ref_ptr<const vsg::Options> o, vsg::ref_ptr<vsg::Data>& d, vsg::ref_ptr<vsg::Latch> l = {}) :
+            Inherit(l),
+            buffer(b),
+            byteOffset(offset),
+            byteLength(length),
+            options(o),
+            data(d) {}
+
+        void run() override
+        {
+            if (!buffer->data)
+            {
+                vsg::warn("Cannot read for empty buffer.");
+                return;
+            }
+
+            auto ptr = reinterpret_cast<uint8_t*>(buffer->data->dataPointer()) + byteOffset;
+
+            data = vsg::read_cast<vsg::Data>(ptr, byteLength, options);
+
+            vsg::info("Read buffer byteLength = ", byteLength, ", data = ", data);
+            // if (data) vsg::write(data, vsg::make_string("image_", byteOffset,".png"), options);
 
             if (latch) latch->count_down();
         }
@@ -966,7 +1012,7 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
                     *dest_itr = 0;
                 }
 
-                auto readData = [](vsg::ref_ptr<vsg::Data> input,  vsg::ref_ptr<const vsg::Options> opt, const char* extensionHint) -> vsg::ref_ptr<vsg::Data>
+                auto readData = [](vsg::ref_ptr<vsg::Data> input,  vsg::ref_ptr<const vsg::Options> opt, const vsg::Path& extensionHint) -> vsg::ref_ptr<vsg::Data>
                 {
                     auto local_options = vsg::clone(opt);
                     local_options->extensionHint = extensionHint;
@@ -985,27 +1031,12 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
                     return data;
                 };
 
+
                 if (mimeType.compare(0, 6, "image/") == 0)
                 {
-                    if (mimeType=="image/png")
+                    if (auto extensionHint = gltf::mimeTypeToExtension(mimeType); !extensionHint.empty())
                     {
-                        data = readData(decodedData, options, ".png");
-                    }
-                    else if (mimeType=="image/jpeg")
-                    {
-                        data = readData(decodedData, options, ".png");
-                    }
-                    else if (mimeType=="image/bmp")
-                    {
-                        data = readData(decodedData, options, ".bmp");
-                    }
-                    else if (mimeType=="image/gif")
-                    {
-                        data = readData(decodedData, options, ".gif");
-                    }
-                    else if (mimeType=="image/ktx")
-                    {
-                        data = readData(decodedData, options, ".ktx");
+                        data = readData(decodedData, options, extensionHint);
                     }
                     else
                     {
@@ -1025,12 +1056,12 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
 
             }
 
-
             if (latch) latch->count_down();
         }
     };
 
     std::vector<vsg::ref_ptr<OperationWithLatch>> operations;
+    std::vector<vsg::ref_ptr<OperationWithLatch>> secondary_operations;
 
     for(auto& buffer : buffers.values)
     {
@@ -1045,25 +1076,45 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
             }
             else
             {
-                operations.push_back(ReadOperation::create(buffer->uri, options, buffer->data));
+                operations.push_back(ReadFileOperation::create(buffer->uri, options, buffer->data));
             }
         }
     }
 
     for(auto& image : images.values)
     {
-        if (!image->data && !image->uri.empty())
+        if (!image->data)
         {
-            std::string_view mimeType;
-            std::string_view encoding;
-            std::string_view value;
-            if (dataURI(image->uri, mimeType, encoding, value))
+            if (!image->uri.empty())
             {
-                operations.push_back(DecodeOperation::create(mimeType, encoding, value, options, image->data, std::numeric_limits<uint32_t>::max()));
+                std::string_view mimeType;
+                std::string_view encoding;
+                std::string_view value;
+                if (dataURI(image->uri, mimeType, encoding, value))
+                {
+                    operations.push_back(DecodeOperation::create(mimeType, encoding, value, options, image->data, std::numeric_limits<uint32_t>::max()));
+                }
+                else
+                {
+                    operations.push_back(ReadFileOperation::create(image->uri, options, image->data));
+                }
+            }
+            else if (image->bufferView)
+            {
+                auto& bufferView = bufferViews.values[image->bufferView.value];
+                auto& buffer = buffers.values[bufferView->buffer.value];
+
+                if (auto extensionHint = gltf::mimeTypeToExtension(image->mimeType); !extensionHint.empty())
+                {
+                    auto local_options = vsg::clone(options);
+                    local_options->extensionHint = extensionHint;
+
+                    secondary_operations.push_back(ReadBufferOperation::create(buffer, bufferView->byteOffset, bufferView->byteLength, local_options, image->data));
+                }
             }
             else
             {
-                operations.push_back(ReadOperation::create(image->uri, options, image->data));
+                vsg::warn("No image uri or bufferView to read image from.");
             }
         }
     }
@@ -1093,6 +1144,35 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
             operation->run();
         }
         vsg::info("Completed single-threaded read/decode");
+    }
+
+
+    // now read any images that were dependent on loading/decoding of shared buffers.
+    if (secondary_operations.size() > 1 && operationThreads)
+    {
+        auto secondary_latch = vsg::Latch::create(static_cast<int>(secondary_operations.size()));
+        for(auto& operation : secondary_operations)
+        {
+            operation->latch = secondary_latch;
+
+            operationThreads->add(operation);
+        }
+
+        // use this thread to read the files as well
+        operationThreads->run();
+
+        // wait till all the read secondary_operations have completed
+        secondary_latch->wait();
+
+        vsg::info("Completed secondary_ multi-threaded read/decode");
+    }
+    else if (!secondary_operations.empty())
+    {
+        for(auto& operation : secondary_operations)
+        {
+            operation->run();
+        }
+        vsg::info("Completed secondary single-threaded read/decode");
     }
 }
 
@@ -1213,3 +1293,29 @@ bool gltf::getFeatures(Features& features) const
 
     return true;
 }
+
+bool gltf::dataURI(const std::string_view& uri, std::string_view& mimeType, std::string_view& encoding, std::string_view& value)
+{
+    if (uri.size() <= 5) return false;
+    if (uri.compare(0, 5, "data:") != 0) return false;
+
+
+    auto semicolon = uri.find(';', 6);
+    auto comma = uri.find(',', semicolon+1);
+
+    mimeType = std::string_view(&uri[5], semicolon-5);
+    encoding = std::string_view(&uri[semicolon+1], comma - semicolon-1);
+    value = std::string_view(&uri[comma+1], uri.size() - comma -1);
+
+    return true;
+};
+
+vsg::Path gltf::mimeTypeToExtension(const std::string_view& mimeType)
+{
+    if (mimeType=="image/png") return ".png";
+    else if (mimeType=="image/jpeg") return ".jpeg";
+    else if (mimeType=="image/bmp") return ".bmp";
+    else if (mimeType=="image/gif") return ".gif";
+    else if (mimeType=="image/ktx") return ".ktx";
+    return "";
+};
