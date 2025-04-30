@@ -731,7 +731,7 @@ vsg::ref_ptr<vsg::Node> gltf::SceneGraphBuilder::createNode(vsg::ref_ptr<gltf::N
             vsg::dvec3 vsg_s(1.0, 1.0, 1.0);
 
             if (t.size()>=3) vsg_t.set(t[0], t[1], t[2]);
-            if (r.size()>=4) vsg_r.set(t[0], r[1], r[2], r[3]);
+            if (r.size()>=4) vsg_r.set(r[0], r[1], r[2], r[3]);
             if (s.size()>=3) vsg_s.set(s[0], s[1], s[2]);
 
             transform->matrix = vsg::translate(vsg_t) * vsg::rotate(vsg_r) * vsg::scale(vsg_s);
