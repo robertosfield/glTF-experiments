@@ -505,6 +505,7 @@ namespace vsgXchange
                 vsg::ref_ptr<vsg::Data> image;
             };
 
+            vsg::ref_ptr<vsg::Options> options;
             vsg::ref_ptr<vsg::ShaderSet> shaderSet;
             vsg::ref_ptr<vsg::SharedObjects> sharedObjects;
 

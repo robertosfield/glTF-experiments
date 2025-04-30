@@ -764,24 +764,39 @@ vsg::ref_ptr<vsg::Node> gltf::SceneGraphBuilder::createNode(vsg::ref_ptr<gltf::N
 
 vsg::ref_ptr<vsg::Node> gltf::SceneGraphBuilder::createScene(vsg::ref_ptr<gltf::Scene> gltf_scene)
 {
-    vsg::ref_ptr<vsg::Node> vsg_scene;
-    if (gltf_scene->nodes.values.size()==1)
+    vsg::CoordinateConvention source_coordinateConvention = vsg::CoordinateConvention::Y_UP;
+    vsg::CoordinateConvention destination_coordinateConvention = vsg::CoordinateConvention::Z_UP;
+    if (options) destination_coordinateConvention = options->sceneCoordinateConvention;
+
+    vsg::dmat4 matrix;
+    if (vsg::transform(source_coordinateConvention, destination_coordinateConvention, matrix))
     {
-        vsg_scene = vsg_nodes[gltf_scene->nodes.values[0].value];
+        auto mt = vsg::MatrixTransform::create(matrix);
+        assign_name_extras(*gltf_scene, *mt);
+
+        for(auto& id : gltf_scene->nodes.values)
+        {
+            mt->addChild(vsg_nodes[id.value]);
+        }
+
+        return mt;
+    }
+    else if (gltf_scene->nodes.values.size()==1)
+    {
+        auto vsg_scene = vsg_nodes[gltf_scene->nodes.values[0].value];
+        assign_name_extras(*gltf_scene, *vsg_scene);
+        return vsg_scene;
     }
     else
     {
-        auto group = vsg::Group::create();
+        auto vsg_scene = vsg::Group::create();
+        assign_name_extras(*gltf_scene, *vsg_scene);
         for(auto& id : gltf_scene->nodes.values)
         {
-            group->addChild(vsg_nodes[id.value]);
+            vsg_scene->addChild(vsg_nodes[id.value]);
         }
-        vsg_scene = group;
-
+        return vsg_scene;
     }
-    assign_name_extras(*gltf_scene, *vsg_scene);
-
-    return vsg_scene;
 }
 
 vsg::ref_ptr<vsg::Object> gltf::SceneGraphBuilder::createSceneGraph(vsg::ref_ptr<gltf::glTF> root, vsg::ref_ptr<const vsg::Options> options)
