@@ -825,8 +825,6 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
     vsg::ref_ptr<vsg::OperationThreads> operationThreads;
     if (options) operationThreads = options->operationThreads;
 
-    vsg::info("operationThreads = ", operationThreads);
-
     auto dataURI = [](const std::string_view& uri, std::string_view& mimeType, std::string_view& encoding, std::string_view& value) -> bool
     {
         if (uri.size() <= 5) return false;
@@ -1134,7 +1132,7 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
         // wait till all the read operations have completed
         latch->wait();
 
-        vsg::info("Completed multi-threaded read/decode");
+        vsg::debug("Completed multi-threaded read/decode");
     }
     else
     {
@@ -1142,7 +1140,7 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
         {
             operation->run();
         }
-        vsg::info("Completed single-threaded read/decode");
+        vsg::debug("Completed single-threaded read/decode");
     }
 
 
@@ -1163,7 +1161,7 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
         // wait till all the read secondary_operations have completed
         secondary_latch->wait();
 
-        vsg::info("Completed secondary_ multi-threaded read/decode");
+        vsg::debug("Completed secondary_ multi-threaded read/decode");
     }
     else if (!secondary_operations.empty())
     {
@@ -1171,7 +1169,7 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
         {
             operation->run();
         }
-        vsg::info("Completed secondary single-threaded read/decode");
+        vsg::debug("Completed secondary single-threaded read/decode");
     }
 }
 
@@ -1222,8 +1220,8 @@ vsg::ref_ptr<vsg::Object> gltf::_read(std::istream& fin, vsg::ref_ptr<const vsg:
 
         root->resolveURIs(options);
 
-        if (parser.warningCount != 0) vsg::info("Failure : ", filename);
-        else vsg::info("Success : ", filename);
+        if (parser.warningCount != 0) vsg::warn("glTF parsing failure : ", filename);
+        else vsg::debug("glTF parsing success : ", filename);
 
         if (vsg::value<bool>(false, gltf::report, options))
         {
@@ -1235,7 +1233,7 @@ vsg::ref_ptr<vsg::Object> gltf::_read(std::istream& fin, vsg::ref_ptr<const vsg:
     }
     else
     {
-        vsg::info("Parsing error, could not find opening {");
+        vsg::warn("glTF parsing error, could not find opening {");
     }
 
     return result;

@@ -305,7 +305,7 @@ vsg::ref_ptr<vsg::Sampler> gltf::SceneGraphBuilder::createSampler(vsg::ref_ptr<g
     vsg_sampler->addressModeU = addressMode(gltf_sampler->wrapS);
     vsg_sampler->addressModeV = addressMode(gltf_sampler->wrapT);
 
-    vsg::info("created sampler { ", vsg_sampler->minFilter, ", ", vsg_sampler->magFilter, ", ", vsg_sampler->mipmapMode, ", ",  gltf_sampler->wrapS, ", ", gltf_sampler->wrapT, "}");
+    // vsg::info("created sampler { ", vsg_sampler->minFilter, ", ", vsg_sampler->magFilter, ", ", vsg_sampler->mipmapMode, ", ",  gltf_sampler->wrapS, ", ", gltf_sampler->wrapT, "}");
 
     return vsg_sampler;
 }
@@ -440,11 +440,8 @@ vsg::ref_ptr<vsg::DescriptorConfigurator> gltf::SceneGraphBuilder::createMateria
 
     if (auto materials_specular = gltf_material->extension<KHR_materials_specular>("KHR_materials_specular"))
     {
-        vsg::info("Have ", materials_specular);
-
-        // ? pbrMaterial.specularFactor{0.2f, 0.2f, 0.2f, 1.0f};
-
-        vsg::info("Not assigned yet: specularFactor = ", materials_specular->specularFactor);
+        float sf = materials_specular->specularFactor;
+        pbrMaterial.specularFactor.set(sf, sf, sf, 1.0);
 
         if (materials_specular->specularTexture.index)
         {
@@ -473,12 +470,12 @@ vsg::ref_ptr<vsg::DescriptorConfigurator> gltf::SceneGraphBuilder::createMateria
         }
     }
 
+#if 0
     if (auto materials_ior = gltf_material->extension<KHR_materials_ior>("KHR_materials_ior"))
     {
-        vsg::info("Have ", materials_ior);
+        vsg::info("Have Index Of Refraction: ", materials_ior);
     }
 
-#if 0
     if (gltf_material->extensions)
     {
         for(auto& [name, schema] : gltf_material->extensions->values)
@@ -851,14 +848,14 @@ vsg::ref_ptr<vsg::Object> gltf::SceneGraphBuilder::createSceneGraph(vsg::ref_ptr
         vsg_accessors[ai] = createAccessor(root->accessors.values[ai]);
     }
 
-    vsg::info("create cameras = ", root->cameras.values.size());
+    // vsg::info("create cameras = ", root->cameras.values.size());
     vsg_cameras.resize(root->cameras.values.size());
     for(size_t ci=0; ci<root->cameras.values.size(); ++ci)
     {
         vsg_cameras[ci] = createCamera(root->cameras.values[ci]);
     }
 
-    vsg::info("create skins = ", root->skins.values.size());
+    // vsg::info("create skins = ", root->skins.values.size());
     vsg_skins.resize(root->skins.values.size());
     for(size_t si=0; si<root->skins.values.size(); ++si)
     {
@@ -869,44 +866,42 @@ vsg::ref_ptr<vsg::Object> gltf::SceneGraphBuilder::createSceneGraph(vsg::ref_ptr
         assign_name_extras(*gltf_skin, *vsg_skin);
     }
 
-    vsg::info("create samplers = ", root->samplers.values.size());
+    // vsg::info("create samplers = ", root->samplers.values.size());
     vsg_samplers.resize(root->samplers.values.size());
     for(size_t sai=0; sai<root->samplers.values.size(); ++sai)
     {
         vsg_samplers[sai] = createSampler(root->samplers.values[sai]);
     }
 
-    vsg::info("create images = ", root->images.values.size());
+    // vsg::info("create images = ", root->images.values.size());
     vsg_images.resize(root->images.values.size());
     for(size_t ii=0; ii<root->images.values.size(); ++ii)
     {
          if (root->images.values[ii]) vsg_images[ii] = createImage(root->images.values[ii]);
     }
 
-
-    vsg::info("create textures = ", root->textures.values.size());
+    // vsg::info("create textures = ", root->textures.values.size());
     vsg_textures.resize(root->textures.values.size());
     for(size_t ti=0; ti<root->textures.values.size(); ++ti)
     {
         vsg_textures[ti] = createTexture(root->textures.values[ti]);
     }
 
-
-    vsg::info("create materials = ", root->materials.values.size());
+    // vsg::info("create materials = ", root->materials.values.size());
     vsg_materials.resize(root->materials.values.size());
     for(size_t mi=0; mi<root->materials.values.size(); ++mi)
     {
         vsg_materials[mi] = createMaterial(root->materials.values[mi]);
     }
 
-    vsg::info("create meshes = ", root->meshes.values.size());
+    // vsg::info("create meshes = ", root->meshes.values.size());
     vsg_meshes.resize(root->meshes.values.size());
     for(size_t mi=0; mi<root->meshes.values.size(); ++mi)
     {
         vsg_meshes[mi] = createMesh(root->meshes.values[mi]);
     }
 
-    vsg::info("create nodes = ", root->nodes.values.size());
+    // vsg::info("create nodes = ", root->nodes.values.size());
     vsg_nodes.resize(root->nodes.values.size());
     for(size_t ni=0; ni<root->nodes.values.size(); ++ni)
     {
@@ -929,8 +924,8 @@ vsg::ref_ptr<vsg::Object> gltf::SceneGraphBuilder::createSceneGraph(vsg::ref_ptr
         }
     }
 
-    vsg::info("scene = ", root->scene);
-    vsg::info("scenes = ", root->scenes.values.size());
+    // vsg::info("scene = ", root->scene);
+    // vsg::info("scenes = ", root->scenes.values.size());
 
     vsg_scenes.resize(root->scenes.values.size());
     for(size_t sci = 0; sci < root->scenes.values.size(); ++sci)
@@ -950,13 +945,13 @@ vsg::ref_ptr<vsg::Object> gltf::SceneGraphBuilder::createSceneGraph(vsg::ref_ptr
 
         vsg_switch->setSingleChildOn(root->scene.value);
 
-        vsg::info("Created a scenes with a switch");
+        // vsg::info("Created a scenes with a switch");
 
         return vsg_switch;
     }
     else
     {
-        vsg::info("Created a single scene");
+        // vsg::info("Created a single scene");
         return vsg_scenes.front();
     }
 }
