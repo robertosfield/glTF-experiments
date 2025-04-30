@@ -36,6 +36,12 @@ using namespace vsgXchange;
 
 gltf::SceneGraphBuilder::SceneGraphBuilder()
 {
+    attributeLookup = {
+        {"POSITION", "vsg_Vertex"},
+        {"NORMAL", "vsg_Normal"},
+        {"TEXCOORD_0", "vsg_TexCoord0"},
+        {"COLOR", "vsg_Color"}
+    };
 }
 
 void gltf::SceneGraphBuilder::assign_extras(ExtensionsExtras& src, vsg::Object& dest)
@@ -222,13 +228,74 @@ vsg::ref_ptr<vsg::Data> gltf::SceneGraphBuilder::createImage(vsg::ref_ptr<gltf::
 vsg::ref_ptr<vsg::Sampler> gltf::SceneGraphBuilder::createSampler(vsg::ref_ptr<gltf::Sampler> gltf_sampler)
 {
     auto vsg_sampler = vsg::Sampler::create();
-#if 0
-    // TODO:
-            uint32_t minFilter = 0;
-            uint32_t magFilter = 0;
-            uint32_t wrapS = 0;
-            uint32_t wrapT = 0;
-#endif
+
+    switch(gltf_sampler->minFilter)
+    {
+        case(9728) : // NEAREST
+            vsg_sampler->minFilter = VK_FILTER_NEAREST;
+            vsg_sampler->mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+            break;
+        case(9729) : // LINEAR
+            vsg_sampler->minFilter = VK_FILTER_LINEAR;
+            vsg_sampler->mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+            break;
+        case(9984) : // NEAREST_MIPMAP_NEAREST
+            vsg_sampler->minFilter = VK_FILTER_NEAREST;
+            vsg_sampler->mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+            break;
+        case(9985) : // LINEAR_MIPMAP_NEAREST
+            vsg_sampler->minFilter = VK_FILTER_LINEAR;
+            vsg_sampler->mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+            break;
+        case(9986) : // NEAREST_MIPMAP_LINEAR
+            vsg_sampler->minFilter = VK_FILTER_NEAREST;
+            vsg_sampler->mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+            break;
+        case(9987) : // LINEAR_MIPMAP_LINEAR
+            vsg_sampler->minFilter = VK_FILTER_LINEAR;
+            vsg_sampler->mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+            break;
+        default:
+            vsg::warn("gltf_sampler->minFilter value of ", gltf_sampler->minFilter, " not supported.");
+            break;
+    }
+
+    switch(gltf_sampler->magFilter)
+    {
+        case(9728) :
+            vsg_sampler->magFilter = VK_FILTER_NEAREST;
+            break;
+        case(9729) :
+            vsg_sampler->magFilter = VK_FILTER_LINEAR;
+            break;
+        default:
+            vsg::warn("gltf_sampler->magFilter value of ", gltf_sampler->magFilter, " not supported.");
+            break;
+    }
+
+
+    auto addressMode = [](uint32_t wrap) -> VkSamplerAddressMode
+    {
+        switch(wrap)
+        {
+            case(33071) : // CLAMP_TO_EDGE
+                return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            case(33648) : // MIRRORED_REPEAT
+                return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
+            case(10497) : // REPEAT
+                return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            default:
+                vsg::warn("gltf_sampler->wrap* value of ", wrap, " not supported.");
+                break;
+        }
+        return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    };
+
+    vsg_sampler->addressModeU = addressMode(gltf_sampler->wrapS);
+    vsg_sampler->addressModeV = addressMode(gltf_sampler->wrapT);
+
+    vsg::info("created sampler { ", vsg_sampler->minFilter, ", ", vsg_sampler->magFilter, ", ", vsg_sampler->mipmapMode, ", ",  gltf_sampler->wrapS, ", ", gltf_sampler->wrapT, "}");
+
     return vsg_sampler;
 }
 
@@ -270,11 +337,11 @@ vsg::ref_ptr<vsg::DescriptorConfigurator> gltf::SceneGraphBuilder::createMateria
 
     if (gltf_material->pbrMetallicRoughness.baseColorTexture.index)
     {
-        auto image = vsg_images[gltf_material->pbrMetallicRoughness.baseColorTexture.index.value];
-        if (image)
+        auto& texture = vsg_textures[gltf_material->pbrMetallicRoughness.baseColorTexture.index.value];
+        if (texture.image)
         {
-            vsg::info("Assigned diffuseMap ", image);
-            vsg_material->assignTexture("diffuseMap", image);
+            vsg::info("Assigned diffuseMap ", texture.image, ", ", texture.sampler);
+            vsg_material->assignTexture("diffuseMap", texture.image, texture.sampler);
         }
         else
         {
@@ -287,11 +354,11 @@ vsg::ref_ptr<vsg::DescriptorConfigurator> gltf::SceneGraphBuilder::createMateria
 
     if (gltf_material->pbrMetallicRoughness.metallicRoughnessTexture.index)
     {
-        auto image = vsg_images[gltf_material->pbrMetallicRoughness.metallicRoughnessTexture.index.value];
-        if (image)
+        auto& texture = vsg_textures[gltf_material->pbrMetallicRoughness.metallicRoughnessTexture.index.value];
+        if (texture.image)
         {
-            vsg::info("Assigned metallicRoughnessTexture ", image);
-            vsg_material->assignTexture("mrMap", image);
+            vsg::info("Assigned metallicRoughnessTexture ", texture.image, ", ", texture.sampler);
+            vsg_material->assignTexture("mrMap", texture.image, texture.sampler);
         }
         else
         {
@@ -301,19 +368,45 @@ vsg::ref_ptr<vsg::DescriptorConfigurator> gltf::SceneGraphBuilder::createMateria
 
     // TODO : pbrMaterial.diffuseFactor? No glTF mapping?
 
-    // TODO : NormalTextureInfo normalTexture;
-    // VSG -> normalMap
+    if (gltf_material->normalTexture.index)
+    {
+        // TODO: gltf_material->normalTexture.scale
 
-    // TODO : OcclusionTextureInfo occlusionTexture;
-    // VSG -> aoMap
+        auto& texture = vsg_textures[gltf_material->normalTexture.index.value];
+        if (texture.image)
+        {
+            vsg::info("Assigned normalTexture ", texture.image, ", ", texture.sampler, ", scale = ", gltf_material->normalTexture.scale);
+            vsg_material->assignTexture("normalMap", texture.image, texture.sampler);
+        }
+        else
+        {
+            vsg::warn("Could not assign normalTexture ", gltf_material->normalTexture.index);
+        }
+    }
+
+    if (gltf_material->occlusionTexture.index)
+    {
+        // TODO: gltf_material->occlusionTexture.strength
+
+        auto& texture = vsg_textures[gltf_material->occlusionTexture.index.value];
+        if (texture.image)
+        {
+            vsg::info("Assigned occlusionTexture ", texture.image, ", ", texture.sampler, ", strength = ", gltf_material->occlusionTexture.strength);
+            vsg_material->assignTexture("aoMap", texture.image, texture.sampler);
+        }
+        else
+        {
+            vsg::warn("Could not assign occlusionTexture ", gltf_material->occlusionTexture.index);
+        }
+    }
 
     if (gltf_material->emissiveTexture.index)
     {
-        auto image = vsg_images[gltf_material->emissiveTexture.index.value];
-        if (image)
+        auto& texture = vsg_textures[gltf_material->emissiveTexture.index.value];
+        if (texture.image)
         {
-            vsg::info("Assigned emissiveTexture ", image);
-            vsg_material->assignTexture("emissiveMap", image);
+            vsg::info("Assigned emissiveTexture ", texture.image, ", ", texture.sampler);
+            vsg_material->assignTexture("emissiveMap", texture.image, texture.sampler);
         }
         else
         {
@@ -344,11 +437,11 @@ vsg::ref_ptr<vsg::DescriptorConfigurator> gltf::SceneGraphBuilder::createMateria
 
         if (materials_specular->specularTexture.index)
         {
-            auto image = vsg_images[materials_specular->specularTexture.index.value ];
-            if (image)
+            auto& texture = vsg_textures[materials_specular->specularTexture.index.value];
+            if (texture.image)
             {
-                vsg::info("Assigned specularTexture ", image);
-                vsg_material->assignTexture("specularMap", image);
+                vsg::info("Assigned specularTexture ", texture.image, ", ", texture.sampler);
+                vsg_material->assignTexture("specularMap", texture.image, texture.sampler);
             }
             else
             {
@@ -424,12 +517,6 @@ vsg::ref_ptr<vsg::Node> gltf::SceneGraphBuilder::createMesh(vsg::ref_ptr<gltf::M
             VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN // 6, TRIANGLE_FAN
     };
 
-    const std::map<std::string, std::string> attributeLookup = {
-        {"POSITION", "vsg_Vertex"},
-        {"NORMAL", "vsg_Normal"},
-        {"TEXCOORD_0", "vsg_TexCoord0"},
-        {"COLOR", "vsg_Color"}
-    };
 
 #if 0
     vsg::info("mesh = {");

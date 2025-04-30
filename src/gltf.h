@@ -287,8 +287,8 @@ namespace vsgXchange
         {
             uint32_t minFilter = 0;
             uint32_t magFilter = 0;
-            uint32_t wrapS = 0;
-            uint32_t wrapT = 0;
+            uint32_t wrapS = 10497; // default REPEAT
+            uint32_t wrapT = 10497; // default REPEAT
 
             // extensions
             // extras
@@ -520,6 +520,9 @@ namespace vsgXchange
             std::vector<vsg::ref_ptr<vsg::Node>> vsg_meshes;
             std::vector<vsg::ref_ptr<vsg::Node>> vsg_nodes;
             std::vector<vsg::ref_ptr<vsg::Node>> vsg_scenes;
+
+            // map used to map gltf attribute names to ShaderSet vertex attribute names
+            std::map<std::string, std::string> attributeLookup;
 
             void assign_extras(ExtensionsExtras& src, vsg::Object& dest);
             void assign_name_extras(NameExtensionsExtras& src, vsg::Object& dest);
