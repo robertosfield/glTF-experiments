@@ -126,11 +126,12 @@ int main(int argc, char** argv)
     viewer->addWindow(window);
 
     // compute the bounds of the scene graph to help position the camera
-    vsg::ComputeBounds computeBounds;
-    scene->accept(computeBounds);
-    vsg::dvec3 centre = (computeBounds.bounds.min+computeBounds.bounds.max)*0.5;
-    double radius = vsg::length(computeBounds.bounds.max-computeBounds.bounds.min)*0.6;
+    auto bounds = vsg::visit<vsg::ComputeBounds>(scene).bounds;
+    vsg::dvec3 centre = (bounds.min + bounds.max)*0.5;
+    double radius = vsg::length(bounds.max - bounds.min)*0.6;
     double nearFarRatio = 0.0001;
+
+    vsg::info("bounds = min { ",bounds.min, " }, max { ", bounds.max, " }");
 
     // set up the camera
     auto lookAt = vsg::LookAt::create(centre+vsg::dvec3(0.0, -radius*3.5, 0.0), centre, vsg::dvec3(0.0, 0.0, 1.0));
