@@ -909,7 +909,7 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
 
             data = vsg::read_cast<vsg::Data>(ptr, byteLength, options);
 
-            vsg::info("Read buffer byteLength = ", byteLength, ", data = ", data);
+            //vsg::info("Read buffer byteLength = ", byteLength, ", data = ", data);
             // if (data) vsg::write(data, vsg::make_string("image_", byteOffset,".png"), options);
 
             if (latch) latch->count_down();
@@ -1045,7 +1045,7 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
                 }
                 else
                 {
-                    vsg::info("We have a data URI : mimeType = ", mimeType, ", encoding = ", encoding, ", value.size() = ", value.size());
+                    // vsg::info("We have a data URI : mimeType = ", mimeType, ", encoding = ", encoding, ", value.size() = ", value.size());
 
                     data = decodedData;
                 }
@@ -1053,7 +1053,6 @@ void gltf::glTF::resolveURIs(vsg::ref_ptr<const vsg::Options> options)
             else
             {
                 vsg::warn("Error: encoding not supported. mimeType = ", mimeType, ", encoding = ", encoding);
-
             }
 
             if (latch) latch->count_down();

@@ -219,13 +219,13 @@ vsg::ref_ptr<vsg::Data> gltf::SceneGraphBuilder::createImage(vsg::ref_ptr<gltf::
 {
     if (gltf_image->data)
     {
-        vsg::info("createImage(", gltf_image, ") gltf_image->data = ", gltf_image->data);
+        // vsg::info("createImage(", gltf_image, ") gltf_image->data = ", gltf_image->data);
         return gltf_image->data;
     }
     else if (gltf_image->bufferView)
     {
         auto data = vsg_bufferViews[gltf_image->bufferView.value];
-        vsg::info("createImage(", gltf_image, ") bufferView = ", gltf_image->bufferView, ", vsg_bufferView = ", data);
+        // vsg::info("createImage(", gltf_image, ") bufferView = ", gltf_image->bufferView, ", vsg_bufferView = ", data);
         return data;
     }
     else
@@ -342,7 +342,7 @@ vsg::ref_ptr<vsg::DescriptorConfigurator> gltf::SceneGraphBuilder::createMateria
     {
         auto& baseColorFactor = gltf_material->pbrMetallicRoughness.baseColorFactor.values;
         pbrMaterial.baseColorFactor.set(baseColorFactor[0], baseColorFactor[1], baseColorFactor[2], baseColorFactor[3]);
-        vsg::info("Assigned baseColorFacator ", pbrMaterial.baseColorFactor);
+        // vsg::info("Assigned baseColorFacator ", pbrMaterial.baseColorFactor);
     }
 
     if (gltf_material->pbrMetallicRoughness.baseColorTexture.index)
@@ -350,7 +350,7 @@ vsg::ref_ptr<vsg::DescriptorConfigurator> gltf::SceneGraphBuilder::createMateria
         auto& texture = vsg_textures[gltf_material->pbrMetallicRoughness.baseColorTexture.index.value];
         if (texture.image)
         {
-            vsg::info("Assigned diffuseMap ", texture.image, ", ", texture.sampler);
+            // vsg::info("Assigned diffuseMap ", texture.image, ", ", texture.sampler);
             vsg_material->assignTexture("diffuseMap", texture.image, texture.sampler);
         }
         else
@@ -367,7 +367,7 @@ vsg::ref_ptr<vsg::DescriptorConfigurator> gltf::SceneGraphBuilder::createMateria
         auto& texture = vsg_textures[gltf_material->pbrMetallicRoughness.metallicRoughnessTexture.index.value];
         if (texture.image)
         {
-            vsg::info("Assigned metallicRoughnessTexture ", texture.image, ", ", texture.sampler);
+            // vsg::info("Assigned metallicRoughnessTexture ", texture.image, ", ", texture.sampler);
             vsg_material->assignTexture("mrMap", texture.image, texture.sampler);
         }
         else
@@ -385,7 +385,7 @@ vsg::ref_ptr<vsg::DescriptorConfigurator> gltf::SceneGraphBuilder::createMateria
         auto& texture = vsg_textures[gltf_material->normalTexture.index.value];
         if (texture.image)
         {
-            vsg::info("Assigned normalTexture ", texture.image, ", ", texture.sampler, ", scale = ", gltf_material->normalTexture.scale);
+            // vsg::info("Assigned normalTexture ", texture.image, ", ", texture.sampler, ", scale = ", gltf_material->normalTexture.scale);
             vsg_material->assignTexture("normalMap", texture.image, texture.sampler);
         }
         else
@@ -401,7 +401,7 @@ vsg::ref_ptr<vsg::DescriptorConfigurator> gltf::SceneGraphBuilder::createMateria
         auto& texture = vsg_textures[gltf_material->occlusionTexture.index.value];
         if (texture.image)
         {
-            vsg::info("Assigned occlusionTexture ", texture.image, ", ", texture.sampler, ", strength = ", gltf_material->occlusionTexture.strength);
+            // vsg::info("Assigned occlusionTexture ", texture.image, ", ", texture.sampler, ", strength = ", gltf_material->occlusionTexture.strength);
             vsg_material->assignTexture("aoMap", texture.image, texture.sampler);
         }
         else
@@ -415,7 +415,7 @@ vsg::ref_ptr<vsg::DescriptorConfigurator> gltf::SceneGraphBuilder::createMateria
         auto& texture = vsg_textures[gltf_material->emissiveTexture.index.value];
         if (texture.image)
         {
-            vsg::info("Assigned emissiveTexture ", texture.image, ", ", texture.sampler);
+            // vsg::info("Assigned emissiveTexture ", texture.image, ", ", texture.sampler);
             vsg_material->assignTexture("emissiveMap", texture.image, texture.sampler);
         }
         else
@@ -427,7 +427,7 @@ vsg::ref_ptr<vsg::DescriptorConfigurator> gltf::SceneGraphBuilder::createMateria
     if (gltf_material->emissiveFactor.values.size()>=3)
     {
         pbrMaterial.emissiveFactor.set(gltf_material->emissiveFactor.values[0], gltf_material->emissiveFactor.values[1], gltf_material->emissiveFactor.values[2], 1.0);
-        vsg::info("Set pbrMaterial.emissiveFactor = ", pbrMaterial.emissiveFactor);
+        // vsg::info("Set pbrMaterial.emissiveFactor = ", pbrMaterial.emissiveFactor);
     }
 
 
@@ -450,7 +450,7 @@ vsg::ref_ptr<vsg::DescriptorConfigurator> gltf::SceneGraphBuilder::createMateria
             auto& texture = vsg_textures[materials_specular->specularTexture.index.value];
             if (texture.image)
             {
-                vsg::info("Assigned specularTexture ", texture.image, ", ", texture.sampler);
+                // vsg::info("Assigned specularTexture ", texture.image, ", ", texture.sampler);
                 vsg_material->assignTexture("specularMap", texture.image, texture.sampler);
             }
             else
@@ -463,7 +463,7 @@ vsg::ref_ptr<vsg::DescriptorConfigurator> gltf::SceneGraphBuilder::createMateria
         {
             auto& specularColorFactor = materials_specular->specularColorFactor.values;
             pbrMaterial.specularFactor.set(specularColorFactor[0], specularColorFactor[1], specularColorFactor[2], 1.0); // TODO, alpha value? Shoult it be specularFactor?
-            vsg::info("Assigned specularColorFactor pbrMaterial.specularFactor ", pbrMaterial.specularFactor);
+            // vsg::info("Assigned specularColorFactor pbrMaterial.specularFactor ", pbrMaterial.specularFactor);
         }
 
         if (materials_specular->specularColorTexture.index)
@@ -477,6 +477,7 @@ vsg::ref_ptr<vsg::DescriptorConfigurator> gltf::SceneGraphBuilder::createMateria
         vsg::info("Have ", materials_ior);
     }
 
+#if 0
     if (gltf_material->extensions)
     {
         for(auto& [name, schema] : gltf_material->extensions->values)
@@ -484,6 +485,7 @@ vsg::ref_ptr<vsg::DescriptorConfigurator> gltf::SceneGraphBuilder::createMateria
             vsg::info("extensions ", name, ", ", schema);
         }
     }
+#endif
 
     vsg_material->assignDescriptor("material", pbrMaterialValue);
 
@@ -544,7 +546,7 @@ vsg::ref_ptr<vsg::Node> gltf::SceneGraphBuilder::createMesh(vsg::ref_ptr<gltf::M
         config->descriptorConfigurator = vsg_material;
         // TODO: if (options) config->assignInheritedState(options->inheritedState);
 
-    #if 1
+#if 0
         vsg::info("    primitive = {");
         vsg::info("        attributes = {");
         for(auto& [semantic, id] : primitive->attributes.values)
