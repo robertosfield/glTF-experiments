@@ -26,10 +26,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/nodes/Group.h>
 #include <vsg/nodes/MatrixTransform.h>
 #include <vsg/nodes/VertexIndexDraw.h>
+#include <vsg/nodes/StateGroup.h>
+#include <vsg/nodes/DepthSorted.h>
 #include <vsg/nodes/Switch.h>
 #include <vsg/app/Camera.h>
 #include <vsg/maths/transform.h>
 #include <vsg/utils/GraphicsPipelineConfigurator.h>
+#include <vsg/utils/ComputeBounds.h>
 #include <vsg/state/material.h>
 
 using namespace vsgXchange;
@@ -142,38 +145,45 @@ vsg::ref_ptr<vsg::Data> gltf::SceneGraphBuilder::createAccessor(vsg::ref_ptr<glt
             else vsg::warn("Unsupported gltf_accessor->componentType = ", gltf_accessor->componentType);
             break;
         case(5122): // SHORT
-            if      (gltf_accessor->type=="SCALAR") vsg_data = vsg::shortArray::create(bufferView, gltf_accessor->byteOffset, 1, gltf_accessor->count);
-            else if (gltf_accessor->type=="VEC2")   vsg_data = vsg::svec2Array::create(bufferView, gltf_accessor->byteOffset, 2, gltf_accessor->count);
-            else if (gltf_accessor->type=="VEC3")   vsg_data = vsg::svec3Array::create(bufferView, gltf_accessor->byteOffset, 3, gltf_accessor->count);
-            else if (gltf_accessor->type=="VEC4")   vsg_data = vsg::svec4Array::create(bufferView, gltf_accessor->byteOffset, 4, gltf_accessor->count);
+            if      (gltf_accessor->type=="SCALAR") vsg_data = vsg::shortArray::create(bufferView, gltf_accessor->byteOffset, 2, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC2")   vsg_data = vsg::svec2Array::create(bufferView, gltf_accessor->byteOffset, 3, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC3")   vsg_data = vsg::svec3Array::create(bufferView, gltf_accessor->byteOffset, 6, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC4")   vsg_data = vsg::svec4Array::create(bufferView, gltf_accessor->byteOffset, 8, gltf_accessor->count);
             else vsg::warn("Unsupported gltf_accessor->componentType = ", gltf_accessor->componentType);
             break;
         case(5123): // UNSIGNED_SHORT
-            if      (gltf_accessor->type=="SCALAR") vsg_data = vsg::ushortArray::create(bufferView, gltf_accessor->byteOffset, 1, gltf_accessor->count);
-            else if (gltf_accessor->type=="VEC2")   vsg_data = vsg::usvec2Array::create(bufferView, gltf_accessor->byteOffset, 2, gltf_accessor->count);
-            else if (gltf_accessor->type=="VEC3")   vsg_data = vsg::usvec3Array::create(bufferView, gltf_accessor->byteOffset, 3, gltf_accessor->count);
-            else if (gltf_accessor->type=="VEC4")   vsg_data = vsg::usvec4Array::create(bufferView, gltf_accessor->byteOffset, 4, gltf_accessor->count);
+            if      (gltf_accessor->type=="SCALAR") vsg_data = vsg::ushortArray::create(bufferView, gltf_accessor->byteOffset, 2, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC2")   vsg_data = vsg::usvec2Array::create(bufferView, gltf_accessor->byteOffset, 4, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC3")   vsg_data = vsg::usvec3Array::create(bufferView, gltf_accessor->byteOffset, 6, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC4")   vsg_data = vsg::usvec4Array::create(bufferView, gltf_accessor->byteOffset, 8, gltf_accessor->count);
             else vsg::warn("Unsupported gltf_accessor->componentType = ", gltf_accessor->componentType);
             break;
         case(5125): // UNSIGNED_INT
-            if      (gltf_accessor->type=="SCALAR") vsg_data = vsg::uintArray::create(bufferView, gltf_accessor->byteOffset, 1, gltf_accessor->count);
-            else if (gltf_accessor->type=="VEC2")   vsg_data = vsg::uivec2Array::create(bufferView, gltf_accessor->byteOffset, 2, gltf_accessor->count);
-            else if (gltf_accessor->type=="VEC3")   vsg_data = vsg::uivec3Array::create(bufferView, gltf_accessor->byteOffset, 3, gltf_accessor->count);
-            else if (gltf_accessor->type=="VEC4")   vsg_data = vsg::uivec4Array::create(bufferView, gltf_accessor->byteOffset, 4, gltf_accessor->count);
+            if      (gltf_accessor->type=="SCALAR") vsg_data = vsg::uintArray::create(bufferView, gltf_accessor->byteOffset, 4, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC2")   vsg_data = vsg::uivec2Array::create(bufferView, gltf_accessor->byteOffset, 8, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC3")   vsg_data = vsg::uivec3Array::create(bufferView, gltf_accessor->byteOffset, 12, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC4")   vsg_data = vsg::uivec4Array::create(bufferView, gltf_accessor->byteOffset, 16, gltf_accessor->count);
             else vsg::warn("Unsupported gltf_accessor->componentType = ", gltf_accessor->componentType);
             break;
         case(5126): // FLOAT
-            if      (gltf_accessor->type=="SCALAR") vsg_data = vsg::byteArray::create(bufferView, gltf_accessor->byteOffset, 1, gltf_accessor->count);
-            else if (gltf_accessor->type=="VEC2")   vsg_data = vsg::vec2Array::create(bufferView, gltf_accessor->byteOffset, 2, gltf_accessor->count);
-            else if (gltf_accessor->type=="VEC3")   vsg_data = vsg::vec3Array::create(bufferView, gltf_accessor->byteOffset, 3, gltf_accessor->count);
-            else if (gltf_accessor->type=="VEC4")   vsg_data = vsg::vec4Array::create(bufferView, gltf_accessor->byteOffset, 4, gltf_accessor->count);
-            //else if (gltf_accessor->type=="MAT2")   vsg_data = vsg::mat2Array::create(bufferView, gltf_accessor->byteOffset, 4, gltf_accessor->count);
-            //else if (gltf_accessor->type=="MAT3")   vsg_data = vsg::mat3Array::create(bufferView, gltf_accessor->byteOffset, 4, gltf_accessor->count);
-            else if (gltf_accessor->type=="MAT4")   vsg_data = vsg::mat4Array::create(bufferView, gltf_accessor->byteOffset, 4, gltf_accessor->count);
+            if      (gltf_accessor->type=="SCALAR") vsg_data = vsg::byteArray::create(bufferView, gltf_accessor->byteOffset, 4, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC2")   vsg_data = vsg::vec2Array::create(bufferView, gltf_accessor->byteOffset, 8, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC3")   vsg_data = vsg::vec3Array::create(bufferView, gltf_accessor->byteOffset, 12, gltf_accessor->count);
+            else if (gltf_accessor->type=="VEC4")   vsg_data = vsg::vec4Array::create(bufferView, gltf_accessor->byteOffset, 16, gltf_accessor->count);
+            //else if (gltf_accessor->type=="MAT2")   vsg_data = vsg::mat2Array::create(bufferView, gltf_accessor->byteOffset, 16, gltf_accessor->count);
+            //else if (gltf_accessor->type=="MAT3")   vsg_data = vsg::mat3Array::create(bufferView, gltf_accessor->byteOffset, 36, gltf_accessor->count);
+            else if (gltf_accessor->type=="MAT4")   vsg_data = vsg::mat4Array::create(bufferView, gltf_accessor->byteOffset, 64, gltf_accessor->count);
             else vsg::warn("Unsupported gltf_accessor->componentType = ", gltf_accessor->componentType);
             break;
     }
-
+#if 0
+    //if (vsg_data->storage())
+    {
+        vsg::info("clonning vsg_data ", vsg_data);
+        vsg_data = vsg::clone(vsg_data);
+        vsg::info("clonned vsg_data ", vsg_data);
+    }
+#endif
     return vsg_data;
 }
 
@@ -526,12 +536,15 @@ vsg::ref_ptr<vsg::Node> gltf::SceneGraphBuilder::createMesh(vsg::ref_ptr<gltf::M
 
     std::vector<vsg::ref_ptr<vsg::Node>> nodes;
 
-    auto config = vsg::GraphicsPipelineConfigurator::create(shaderSet);
-
     for(auto& primitive : gltf_mesh->primitives.values)
     {
+        auto vsg_material = vsg_materials[primitive->material.value];
 
-#if 0
+        auto config = vsg::GraphicsPipelineConfigurator::create(vsg_material->shaderSet);
+        config->descriptorConfigurator = vsg_material;
+        // TODO: if (options) config->assignInheritedState(options->inheritedState);
+
+    #if 1
         vsg::info("    primitive = {");
         vsg::info("        attributes = {");
         for(auto& [semantic, id] : primitive->attributes.values)
@@ -550,32 +563,103 @@ vsg::ref_ptr<vsg::Node> gltf::SceneGraphBuilder::createMesh(vsg::ref_ptr<gltf::M
         vsg::info("    }");
 #endif
 
+
         auto vid = vsg::VertexIndexDraw::create();
-        nodes.push_back(vid);
+
         assign_extras(*primitive, *vid);
 
-#if 1
         vsg::DataList vertexArrays;
 
-        for(auto& [attribute_name, id] : primitive->attributes.values)
+        auto assignArray = [&](const std::string& attribute_name) -> bool
         {
-            if (auto itr = attributeLookup.find(attribute_name); itr != attributeLookup.end())
-            {
-                config->assignArray(vertexArrays, itr->second, VK_VERTEX_INPUT_RATE_VERTEX, vsg_accessors[id.value]);
-            }
-            else
-            {
-                vsg::warn("Unsupport attribute type ", attribute_name);
-            }
+            auto array_itr = primitive->attributes.values.find(attribute_name);
+            if (array_itr == primitive->attributes.values.end()) return false;
+
+            auto name_itr = attributeLookup.find(attribute_name);
+            if (name_itr == attributeLookup.end()) return true;
+
+            config->assignArray(vertexArrays, name_itr->second, VK_VERTEX_INPUT_RATE_VERTEX, vsg_accessors[array_itr->second.value]);
+            return true;
+        };
+
+        assignArray("POSITION");
+
+        assignArray("NORMAL");
+
+        assignArray("TEXCOORD_0");
+
+        if (!assignArray("COLOR_0"))
+        {
+            auto defaultColor = vsg::vec4Value::create(1.0f, 1.0f, 1.0f, 1.0f);
+            config->assignArray(vertexArrays, "vsg_Color", VK_VERTEX_INPUT_RATE_INSTANCE, defaultColor);
         }
 
         vid->assignArrays(vertexArrays);
-#endif
+
         if (primitive->indices)
         {
             auto indices = vsg_accessors[primitive->indices.value];
             vid->assignIndices(indices);
+            vid->indexCount = static_cast<uint32_t>(indices->valueCount());
+        } // TODO: else use VertexDraw?
+
+
+        vid->instanceCount = 1;
+
+        // set the GraphicsPipelineStates to the required values.
+        struct SetPipelineStates : public vsg::Visitor
+        {
+            VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+            bool blending = false;
+            bool two_sided = false;
+
+            SetPipelineStates(VkPrimitiveTopology in_topology, bool in_blending, bool in_two_sided) :
+                topology(in_topology), blending(in_blending), two_sided(in_two_sided) {}
+
+            void apply(vsg::Object& object) { object.traverse(*this); }
+            void apply(vsg::RasterizationState& rs)
+            {
+                if (two_sided) rs.cullMode = VK_CULL_MODE_NONE;
+            }
+            void apply(vsg::InputAssemblyState& ias) { ias.topology = topology; }
+            void apply(vsg::ColorBlendState& cbs) { cbs.configureAttachments(blending); }
+
+        } sps(topologyLookup[primitive->mode], vsg_material->blending, vsg_material->two_sided);
+
+        config->accept(sps);
+
+        if (sharedObjects)
+            sharedObjects->share(config, [](auto gpc) { gpc->init(); });
+        else
+            config->init();
+
+        // create StateGroup as the root of the scene/command graph to hold the GraphicsPipeline, and binding of Descriptors to decorate the whole graph
+        auto stateGroup = vsg::StateGroup::create();
+
+        config->copyTo(stateGroup, sharedObjects);
+
+        stateGroup->addChild(vid);
+
+        if (vsg_material->blending)
+        {
+            vsg::ComputeBounds computeBounds;
+            vid->accept(computeBounds);
+            vsg::dvec3 center = (computeBounds.bounds.min + computeBounds.bounds.max) * 0.5;
+            double radius = vsg::length(computeBounds.bounds.max - computeBounds.bounds.min) * 0.5;
+
+            auto depthSorted = vsg::DepthSorted::create();
+            depthSorted->binNumber = 10;
+            depthSorted->bound.set(center[0], center[1], center[2], radius);
+            depthSorted->child = stateGroup;
+
+            nodes.push_back(depthSorted);
         }
+        else
+        {
+            nodes.push_back(stateGroup);
+        }
+
+
     }
 
     if (nodes.empty())
