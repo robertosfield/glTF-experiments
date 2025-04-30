@@ -1281,6 +1281,7 @@ vsg::ref_ptr<vsg::Object> gltf::read(const uint8_t* ptr, size_t size, vsg::ref_p
 bool gltf::readOptions(vsg::Options& options, vsg::CommandLine& arguments) const
 {
     bool result = arguments.readAndAssign<bool>(gltf::report, &options);
+    result = arguments.readAndAssign<bool>(gltf::culling, &options) || result;
     return result;
 }
 

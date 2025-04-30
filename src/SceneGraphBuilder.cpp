@@ -29,6 +29,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vsg/nodes/StateGroup.h>
 #include <vsg/nodes/DepthSorted.h>
 #include <vsg/nodes/Switch.h>
+#include <vsg/nodes/CullNode.h>
 #include <vsg/app/Camera.h>
 #include <vsg/maths/transform.h>
 #include <vsg/utils/GraphicsPipelineConfigurator.h>
@@ -766,39 +767,57 @@ vsg::ref_ptr<vsg::Node> gltf::SceneGraphBuilder::createNode(vsg::ref_ptr<gltf::N
 
 vsg::ref_ptr<vsg::Node> gltf::SceneGraphBuilder::createScene(vsg::ref_ptr<gltf::Scene> gltf_scene)
 {
+    if (gltf_scene->nodes.values.empty())
+    {
+        vsg::warn("Cannot create scene graph from empty gltf::Scene.");
+        return {};
+    }
+
     vsg::CoordinateConvention source_coordinateConvention = vsg::CoordinateConvention::Y_UP;
     vsg::CoordinateConvention destination_coordinateConvention = vsg::CoordinateConvention::Z_UP;
     if (options) destination_coordinateConvention = options->sceneCoordinateConvention;
+
+    vsg::ref_ptr<vsg::Node> vsg_scene;
 
     vsg::dmat4 matrix;
     if (vsg::transform(source_coordinateConvention, destination_coordinateConvention, matrix))
     {
         auto mt = vsg::MatrixTransform::create(matrix);
-        assign_name_extras(*gltf_scene, *mt);
 
         for(auto& id : gltf_scene->nodes.values)
         {
             mt->addChild(vsg_nodes[id.value]);
         }
 
-        return mt;
+        vsg_scene = mt;
     }
-    else if (gltf_scene->nodes.values.size()==1)
+    else if (gltf_scene->nodes.values.size()>1)
     {
-        auto vsg_scene = vsg_nodes[gltf_scene->nodes.values[0].value];
-        assign_name_extras(*gltf_scene, *vsg_scene);
-        return vsg_scene;
+        auto group = vsg::Group::create();
+        for(auto& id : gltf_scene->nodes.values)
+        {
+            group->addChild(vsg_nodes[id.value]);
+        }
+        vsg_scene = group;
     }
     else
     {
-        auto vsg_scene = vsg::Group::create();
-        assign_name_extras(*gltf_scene, *vsg_scene);
-        for(auto& id : gltf_scene->nodes.values)
-        {
-            vsg_scene->addChild(vsg_nodes[id.value]);
-        }
-        return vsg_scene;
+        vsg_scene = vsg_nodes[gltf_scene->nodes.values[0].value];
     }
+
+    bool culling = vsg::value<bool>(true, gltf::culling, options);
+    if (culling)
+    {
+        auto bounds = vsg::visit<vsg::ComputeBounds>(vsg_scene).bounds;
+        vsg::dsphere bs((bounds.max + bounds.min) * 0.5, vsg::length(bounds.max - bounds.min) * 0.5);
+
+        auto cullNode = vsg::CullNode::create(bs, vsg_scene);
+        vsg_scene = cullNode;
+    }
+
+    // assign meta data
+    assign_name_extras(*gltf_scene, *vsg_scene);
+    return vsg_scene;
 }
 
 vsg::ref_ptr<vsg::Object> gltf::SceneGraphBuilder::createSceneGraph(vsg::ref_ptr<gltf::glTF> root, vsg::ref_ptr<const vsg::Options> options)

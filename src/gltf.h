@@ -51,6 +51,7 @@ namespace vsgXchange
         bool getFeatures(Features& features) const override;
 
         static constexpr const char* report = "report";
+        static constexpr const char* culling = "culling"; /// bool, insert cull nodes, defaults to true
 
         bool readOptions(vsg::Options& options, vsg::CommandLine& arguments) const override;
 
